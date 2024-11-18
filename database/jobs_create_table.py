@@ -56,24 +56,10 @@ create_table_query = '''
 
 '''
 cur.execute(create_table_query)
-
-# Create a Sequence: A sequence in PostgreSQL is a database object that generates unique numbers. You can create one that starts from the current highest job_id in your table.
-create_sequence_query = '''
-DROP SEQUENCE IF EXISTS job_id_seq;
-CREATE SEQUENCE job_id_seq START WITH 1 ;
-SELECT setval('job_id_seq', (SELECT MAX(job_id) FROM jobs) + 1);
-''' 
-
-# Alter the Table to Use the Sequence for job_id: Once you're ready to switch from Airtable IDs to auto-generated job_ids, you can alter the table to default to using the sequence.
-
-alter_table_query = '''
-ALTER TABLE jobs ALTER COLUMN job_id SET DEFAULT nextval('job_id_seq');
-'''
-cur.execute(create_sequence_query)
-
-cur.execute(alter_table_query)
 conn.commit()
 
 
 cur.close()
 conn.close()
+
+

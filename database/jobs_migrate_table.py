@@ -52,7 +52,7 @@ try:
     fields.get('country_code'),
     fields.get('seniority'),
     fields.get('desciption'),  # Ensure correct spelling ('description')
-    fields.get('sport_list'),
+    fields.get('sport_list')[0] if fields.get('sport_list') else None,
     fields.get('skills'),
     fields.get('remote'),
     fields.get('remote_office'),
@@ -60,9 +60,9 @@ try:
     fields.get('language'),
     fields.get('tags'),
     fields.get('company'),
-    fields.get('industry'),
-    fields.get('job_type'),
-    fields.get('hours'),
+    fields.get('industry')[0] if fields.get('industry') else None,
+    fields.get('type')[0] if fields.get('type') else None,
+    fields.get('hours')[0] if fields.get('hours') else None,
     fields.get('logo_permanent_url'),
     fields.get('job_area'),
     fields.get('post_duration'),
@@ -72,7 +72,31 @@ try:
 )
         cur.execute(insert_query, data)
 
+
+    # Create a Sequence: A sequence in PostgreSQL is a database object that generates unique numbers. You can create one that starts from the current highest job_id in your table.
+    create_sequence_query = '''
+    DROP SEQUENCE IF EXISTS job_id_seq;
+    CREATE SEQUENCE job_id_seq START WITH 1 ;
+    SELECT setval('job_id_seq', (SELECT MAX(job_id) FROM jobs) + 1);
+    ''' 
+
+    # Alter the Table to Use the Sequence for job_id: Once you're ready to switch from Airtable IDs to auto-generated job_ids, you can alter the table to default to using the sequence.
+
+    alter_table_query = '''
+    ALTER TABLE jobs ALTER COLUMN job_id SET DEFAULT nextval('job_id_seq');
+    '''
+    cur.execute(create_sequence_query)
+
+    cur.execute(alter_table_query)
     conn.commit()
+    
+    
+    cur.execute("SELECT last_value FROM job_id_seq;")
+    result = cur.fetchone()
+    print(f' last sequence value : {result}')
+
+
+
 except Exception as e:
     print(e)
     conn.rollback()
