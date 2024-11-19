@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-env_path = Path('sportsjobs') / '.env' 
+env_path = Path('sportsjobs_postgres') / '.env' 
 load_dotenv(dotenv_path=env_path)
 # Airtable configuration
 AIRTABLE_TOKEN = os.getenv("AIRTABLE_TOKEN")

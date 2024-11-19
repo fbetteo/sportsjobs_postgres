@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-env_path = Path('sportsjobs') / '.env' 
+env_path = Path('sportsjobs_postgres') / '.env' 
 load_dotenv(dotenv_path=env_path)
 
 # PostgreSQL configuration
@@ -18,6 +18,7 @@ conn = psycopg2.connect(dbname=DB_NAME, user=DB_USER,
                         password=DB_PASSWORD, host=DB_HOST)
 cur = conn.cursor()
 
+cur.execute("DROP TABLE IF EXISTS users;")
 # Create table in PostgreSQL (if not exists)
 create_table_query = '''
 CREATE TABLE users (

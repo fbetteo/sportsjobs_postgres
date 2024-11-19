@@ -12,6 +12,8 @@ python-dotenv = "^1.0.1"
 pyairtable = "^2.3.3"
 psycopg2-binary = "^2.9.9"
 ipykernel = "^6.29.5"
+fastapi = "^0.115.5"
+uvicorn = "^0.32.0"
 
 
 [build-system]

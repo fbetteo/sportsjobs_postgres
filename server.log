@@ -1,0 +1,37 @@
+nohup: ignoring input
+INFO:     Started server process [1053768]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INSERT INTO alerts (name, email, country, seniority, sport_list, skills, remote_office, hours)  VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING *
+INFO:     181.94.163.68:51174 - "POST /add_alert HTTP/1.1" 200 OK
+INFO:     98.80.4.34:52270 - "GET / HTTP/1.1" 404 Not Found
+INFO:     44.220.185.162:42830 - "GET / HTTP/1.1" 404 Not Found
+INFO:     154.213.184.18:52350 - "CONNECT example.com%3A443 HTTP/1.1" 404 Not Found
+INFO:     188.217.38.184:41986 - "GET / HTTP/1.0" 404 Not Found
+INFO:     139.59.169.120:51338 - "GET / HTTP/1.1" 404 Not Found
+INFO:     154.213.184.18:51474 - "CONNECT example.com%3A443 HTTP/1.1" 404 Not Found
+INFO:     198.235.24.20:62728 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     65.49.1.46:10809 - "GET / HTTP/1.1" 404 Not Found
+INFO:     65.49.1.45:32571 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     65.49.1.38:37783 - "GET http%3A//api.ipify.org/?format=json HTTP/1.1" 404 Not Found
+INFO:     65.49.1.47:61741 - "CONNECT www.shadowserver.org%3A443 HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     80.75.212.9:45694 - "CONNECT api.ip.pn%3A443 HTTP/1.1" 404 Not Found
+INFO:     125.229.247.132:49259 - "GET / HTTP/1.0" 404 Not Found
+INFO:     94.102.56.99:39418 - "GET / HTTP/1.1" 404 Not Found
+INFO:     154.213.184.18:48604 - "CONNECT example.com%3A443 HTTP/1.1" 404 Not Found
+INFO:     205.210.31.219:63140 - "GET / HTTP/1.1" 404 Not Found
+INFO:     8.217.78.51:40944 - "GET /.env HTTP/1.1" 404 Not Found
+INFO:     114.35.78.230:40525 - "GET / HTTP/1.0" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     165.154.120.226:50016 - "GET / HTTP/1.1" 404 Not Found
+INFO:     165.154.120.226:41890 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     165.154.120.226:41892 - "GET /robots.txt HTTP/1.1" 404 Not Found
+INFO:     165.154.120.226:41898 - "GET /sitemap.xml HTTP/1.1" 404 Not Found
+INFO:     198.235.24.243:58260 - "GET / HTTP/1.1" 404 Not Found
+INFO:     64.227.21.251:56392 - "POST /add_user HTTP/1.1" 422 Unprocessable Entity
+INSERT INTO users (name, email, plan) VALUES (%s, %s, %s) RETURNING *
+INFO:     64.227.21.251:40156 - "POST /add_user HTTP/1.1" 200 OK
