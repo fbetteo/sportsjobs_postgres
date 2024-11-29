@@ -5,7 +5,7 @@ from psycopg2 import sql
 from pydantic import BaseModel, Field
 import os
 from dotenv import load_dotenv
-
+from datetime import datetime, timezone
 # Load environment variables
 load_dotenv()
 
@@ -60,6 +60,7 @@ class AddUser(BaseModel):
     name: str
     email: str
     plan: str
+    creation_date: datetime =  Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class AddAlert(BaseModel):
     name: str = Field(default="")
@@ -82,7 +83,7 @@ async def add_user(record: AddUser, request: Request):
 
         # Example query to update a user's plan based on email
         data = record.model_dump()
-        query = sql.SQL("INSERT INTO users (name, email, plan) VALUES ({}) RETURNING *").format(
+        query = sql.SQL("INSERT INTO users (name, email, plan, creation_date) VALUES ({}) RETURNING *").format(
             sql.SQL(", ").join(sql.Placeholder() * len(data))
             )
         print(query.as_string(conn))
