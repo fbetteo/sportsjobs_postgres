@@ -38,8 +38,8 @@ try:
     for record in all_records:
         fields = record['fields']
         insert_query = f"""
-        INSERT INTO jobs (job_id, name, status, start_date, url, location, country, country_code, seniority, description, sport_list, skills, remote, remote_office, salary, language, tags, company, industry, job_type, hours, logo_permanent_url, job_area, post_duration, creation_date, post_tier, featured)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s);
+        INSERT INTO jobs (job_id, name, status, start_date, url, location, country, country_code, seniority, description, sport_list, skills, remote, remote_office, salary, language, tags, company, industry, job_type, hours, logo_permanent_url, job_area, post_duration, creation_date, post_tier, featured, airtable_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s);
 """
         data = (
     fields.get('id'),
@@ -68,7 +68,8 @@ try:
     fields.get('post_duration'),
     fields.get('creation_date'),
     fields.get('post_tier'),
-    fields.get('featured')
+    fields.get('featured'),
+    record.get('id')
 )
         cur.execute(insert_query, data)
 

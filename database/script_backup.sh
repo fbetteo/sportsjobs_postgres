@@ -4,7 +4,7 @@ BACKUP_DIR="/../home/sportsjobs_postgres/database_backups"
 BACKUP_FILE="$BACKUP_DIR/sportsjobs_$TIMESTAMP.sql"
 
 mkdir -p $BACKUP_DIR
-export PGPASSFILE="/.pgpass"
+export PGPASSFILE="/root/.pgpass"
 pg_dump -U admin -h localhost -d sportsjobs > $BACKUP_FILE
 echo "Backup created at $BACKUP_FILE"
 

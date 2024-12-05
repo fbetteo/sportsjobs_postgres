@@ -1,0 +1,12 @@
+Password: 
+pg_dump: error: connection to server at "localhost" (::1), port 5432 failed: fe_sendauth: no password supplied
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241202_150002.sql
+Password: 
+pg_dump: error: connection to server at "localhost" (::1), port 5432 failed: fe_sendauth: no password supplied
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241203_150001.sql
+Password: 
+pg_dump: error: connection to server at "localhost" (::1), port 5432 failed: fe_sendauth: no password supplied
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241204_150001.sql
+Password: 
+pg_dump: error: connection to server at "localhost" (::1), port 5432 failed: fe_sendauth: no password supplied
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241205_150001.sql
