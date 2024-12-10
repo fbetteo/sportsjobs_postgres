@@ -24,3 +24,9 @@ class GetJob(BaseModel):
     filters: Optional[dict] = None
     sort_by: str = "creation_date"
     sort_direction: str = "desc"
+
+class GetBlog(BaseModel):
+    limit: Optional[int] = 100,
+    filters: Optional[dict] = None
+    sort_by: str = "creation_date"
+    sort_direction: str = "desc"
