@@ -23,3 +23,11 @@ Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241
 Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241216_150001.sql
 Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241217_150001.sql
 Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241218_150001.sql
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241219_150001.sql
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241220_150001.sql
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241221_150001.sql
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241222_150001.sql
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241223_150001.sql
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241224_150001.sql
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241225_150001.sql
+Backup created at /../home/sportsjobs_postgres/database_backups/sportsjobs_20241226_150001.sql
