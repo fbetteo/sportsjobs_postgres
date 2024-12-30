@@ -3,7 +3,7 @@ import os
 from database.connection import get_db_connection
 from typing import Optional, List
 from datetime import datetime
-from models.schemas import GetJob
+from models.schemas import GetJob, AddJob
 
 router = APIRouter()
 
@@ -65,3 +65,74 @@ async def get_jobs(
     finally:
         cur.close()
         conn.close()
+
+@router.post("/add_job")
+async def post_jobs(
+    job_data: AddJob,
+    request: Request
+):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        
+        with conn.cursor() as cursor:
+            insert_query = """
+                INSERT INTO jobs (
+        name,
+        url,
+        location,
+        country,
+        seniority,
+        description,
+        sport_list,
+        skills,
+        remote_office,
+        salary,
+        language,
+        company,
+        industry,
+        hours,
+        featured,
+        logo_permanent_url,
+        creation_date
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    RETURNING job_id;
+            """
+            
+            values = (
+    job_data.name,
+    job_data.url,
+    job_data.location,
+    job_data.country,
+    job_data.seniority,
+    job_data.description,
+    job_data.sport_list,
+    job_data.skills,
+    job_data.remote_office,
+    job_data.salary,
+    job_data.language,
+    job_data.company,
+    job_data.industry,
+    job_data.hours,
+    job_data.featured,
+    job_data.logo_permanent_url,
+    job_data.creation_date
+)
+            
+            cursor.execute(insert_query, values)
+            job_id = cursor.fetchone()[0]
+            conn.commit()
+            
+            return {"message": "Job created successfully", "job_id": job_id}
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    finally:
+        if conn:
+            conn.close()
