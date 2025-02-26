@@ -22,11 +22,17 @@ async def get_jobs(
         query = "SELECT * FROM jobs WHERE 1=1"
         params = []
 
+        # Define string columns that should use case-insensitive comparison. I have other string columns as filters but currently no need to lower as the regular parameter is in the right format. Maybe I should do it anyway??
+        string_columns = ['company']
+        
         # Add filters if they exist
         if query_options.filters:
             for key, value in query_options.filters.items():
                 if value:
-                    query += f" AND {key} = %s"
+                    if key in string_columns:
+                        query += f" AND LOWER({key}) = LOWER(%s)"
+                    else: 
+                        query += f" AND {key} = %s"
                     params.append(value)
 
         # Add sorting
