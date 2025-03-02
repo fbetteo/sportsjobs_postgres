@@ -50,7 +50,8 @@ create_table_query = '''
     creation_date TIMESTAMPTZ,                 -- Creation date with time zone for storing both date and time
     post_tier VARCHAR(50),
     featured VARCHAR(50),
-    airtable_id VARCHAR(100)
+    airtable_id VARCHAR(100),
+    slug VARCHAR(255) UNIQUE
 
 );
 

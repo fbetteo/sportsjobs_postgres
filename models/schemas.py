@@ -36,6 +36,7 @@ class AddJob(BaseModel):
     featured: Optional[str] = "1 - regular"
     logo_permanent_url: Optional[str] = "https://cdn.sportsjobs.online/blogposts/images/sportsjobs_logo.png"
     creation_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    slug: Optional[str] = None
 
 
 class GetJob(BaseModel):
