@@ -49,3 +49,6 @@ class GetBlog(BaseModel):
     filters: Optional[dict] = None
     sort_by: str = "creation_date"
     sort_direction: str = "desc"
+
+class GetCompanies(BaseModel):
+    limit: Optional[int] = 100,

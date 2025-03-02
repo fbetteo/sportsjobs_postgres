@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Request
 # import os
 from dotenv import load_dotenv
 # from datetime import datetime, timezone
-from endpoints import health, users, alerts, jobs, blog
+from endpoints import health, users, alerts, jobs, blog, companies
 # Load environment variables
 load_dotenv()
 
@@ -20,6 +20,7 @@ app.include_router(users.router)
 app.include_router(alerts.router)
 app.include_router(jobs.router)
 app.include_router(blog.router)
+app.include_router(companies.router)
 # # Database connection setup
 # def get_db_connection():
 #     return psycopg2.connect(
