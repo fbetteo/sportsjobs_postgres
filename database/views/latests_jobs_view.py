@@ -24,7 +24,7 @@ create_view_query = """
     CREATE OR REPLACE VIEW latest_jobs_view AS
 SELECT 
    *,
-    'www.sportsjobs.online/jobs/' || job_id || '?source=newsletter' AS job_url
+    'www.sportsjobs.online/jobs/' || slug  AS job_url
 
 FROM jobs
 ORDER BY start_date desc

@@ -25,7 +25,7 @@ create_view_query = """
 SELECT 
     job_id, start_date,     name,
     company,
-    'www.sportsjobs.online/jobs/' || job_id  AS job_url
+    'www.sportsjobs.online/jobs/' || slug  AS job_url
 
 FROM jobs
 ORDER BY start_date desc
