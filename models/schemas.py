@@ -73,3 +73,26 @@ class GetBlog(BaseModel):
 
 class GetCompanies(BaseModel):
     limit: Optional[int] = (100,)
+
+
+# Webhook schemas
+class WebhookArticle(BaseModel):
+    id: str
+    title: str
+    content_markdown: str
+    content_html: str
+    meta_description: str
+    created_at: str
+    image_url: Optional[str] = None
+    slug: str
+    tags: List[str]
+
+
+class WebhookData(BaseModel):
+    articles: List[WebhookArticle]
+
+
+class WebhookPayload(BaseModel):
+    event_type: str
+    timestamp: str
+    data: WebhookData
