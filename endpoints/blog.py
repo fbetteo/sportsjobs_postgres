@@ -131,7 +131,7 @@ async def blog_webhook(webhook_payload: WebhookPayload, request: Request):
         raise HTTPException(status_code=401, detail="Invalid access token")
 
     token = auth_header.split(" ")[1]
-    expected_token = "pruebaoutrank"
+    expected_token = os.getenv('OUTRANK_HEADER_AUTHORIZATION')
     if not expected_token or token != expected_token:
         raise HTTPException(status_code=401, detail="Invalid access token")
 
