@@ -1,12 +1,15 @@
 # from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Request
+
 # import psycopg2
 # from psycopg2 import sql
 # from pydantic import BaseModel, Field
 # import os
 from dotenv import load_dotenv
+
 # from datetime import datetime, timezone
-from endpoints import health, users, alerts, jobs, blog, companies
+from endpoints import health, newsletter, users, alerts, jobs, blog, companies
+
 # Load environment variables
 load_dotenv()
 
@@ -21,6 +24,7 @@ app.include_router(alerts.router)
 app.include_router(jobs.router)
 app.include_router(blog.router)
 app.include_router(companies.router)
+app.include(newsletter.router)
 # # Database connection setup
 # def get_db_connection():
 #     return psycopg2.connect(
@@ -62,7 +66,7 @@ app.include_router(companies.router)
 #         if cursor:
 #             cursor.close()
 #         if conn:
-#             conn.close()    
+#             conn.close()
 
 # Pydantic model for request body
 # class AddUser(BaseModel):
@@ -116,7 +120,6 @@ app.include_router(companies.router)
 #         conn.close()
 
 
-
 # @app.post("/add_alert")
 # async def add_alert(record: AddAlert, request: Request):
 #     auth_header = request.headers.get("Authorization")
@@ -150,4 +153,3 @@ app.include_router(companies.router)
 #     finally:
 #         cursor.close()
 #         conn.close()
-
