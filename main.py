@@ -24,7 +24,7 @@ app.include_router(alerts.router)
 app.include_router(jobs.router)
 app.include_router(blog.router)
 app.include_router(companies.router)
-app.include(newsletter.router)
+app.include_router(newsletter.router)
 # # Database connection setup
 # def get_db_connection():
 #     return psycopg2.connect(
