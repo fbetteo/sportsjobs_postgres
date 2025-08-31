@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from typing import List, Optional
 
 
@@ -19,6 +19,19 @@ class AddAlert(BaseModel):
     skills: Optional[List[str]] = Field(default_factory=list)
     remote_office: Optional[List[str]] = Field(default_factory=list)
     hours: Optional[List[str]] = Field(default_factory=list)
+
+
+class AddBlog(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    content_image: Optional[str] = None
+    cover: Optional[str] = None
+    short_description: Optional[str] = None
+    creation_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_modified: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    post_date: Optional[date] = Field(
+        default_factory=lambda: datetime.now(timezone.utc).date()
+    )
 
 
 class AddJob(BaseModel):
@@ -66,3 +79,26 @@ class AddNewsletterSignup(BaseModel):
 
 class GetCompanies(BaseModel):
     limit: Optional[int] = (100,)
+
+
+# Webhook schemas
+class WebhookArticle(BaseModel):
+    id: str
+    title: str
+    content_markdown: str
+    content_html: str
+    meta_description: str
+    created_at: str
+    image_url: Optional[str] = None
+    slug: str
+    tags: List[str]
+
+
+class WebhookData(BaseModel):
+    articles: List[WebhookArticle]
+
+
+class WebhookPayload(BaseModel):
+    event_type: str
+    timestamp: str
+    data: WebhookData
