@@ -29,7 +29,7 @@ create_table_query = """
     name VARCHAR(255),                        -- Name (nullable)
     signup_date TIMESTAMPTZ DEFAULT NOW(),    -- Signup timestamp with timezone (defaults to current time)
     source VARCHAR(255),                      -- UTM tracking source
-    welcome_sent TIMESTAMPTZ,                 -- Welcome email sent timestamp (nullable)
+    welcome_sent TIMESTAMPTZ DEFAULT NOW(),                 -- Welcome email sent timestamp (nullable)
     day2_sent TIMESTAMPTZ,                    -- Day 2 email sent timestamp (nullable)
     day4_sent TIMESTAMPTZ,                    -- Day 4 email sent timestamp (nullable)
     day6_sent TIMESTAMPTZ,                    -- Day 6 email sent timestamp (nullable)
