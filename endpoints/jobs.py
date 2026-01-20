@@ -7,9 +7,9 @@ from models.schemas import GetJob, AddJob
 
 router = APIRouter()
 
+
 @router.post("/jobs")
-async def get_jobs(
-    query_options: GetJob ,request: Request):
+async def get_jobs(query_options: GetJob, request: Request):
     auth_header = request.headers.get("Authorization")
     if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -23,34 +23,36 @@ async def get_jobs(
         params = []
 
         # Define string columns that should use case-insensitive comparison. I have other string columns as filters but currently no need to lower as the regular parameter is in the right format. Maybe I should do it anyway??
-        string_columns = ['company']
-        
+        string_columns = ["company"]
+
         # Add filters if they exist
         if query_options.filters:
             for key, value in query_options.filters.items():
                 if value:
                     if key in string_columns:
                         query += f" AND LOWER({key}) = LOWER(%s)"
-                    else: 
+                    else:
                         query += f" AND {key} = %s"
                     params.append(value)
 
         # Add sorting
-        query += f" ORDER BY {query_options.sort_by} {query_options.sort_direction.upper()}"
-        
+        query += (
+            f" ORDER BY {query_options.sort_by} {query_options.sort_direction.upper()}"
+        )
+
         # Add limit
         query += " LIMIT %s"
         params.append(query_options.limit)
 
         # Execute query
         cur.execute(query, tuple(params))
-        
+
         # Fetch results
         jobs = cur.fetchall()
-        
+
         # Get column names
         columns = [desc[0] for desc in cur.description]
-        
+
         # Convert to list of dictionaries
         result = []
         for job in jobs:
@@ -59,9 +61,8 @@ async def get_jobs(
             result.append(
                 # "id": job_dict["job_id"],
                 # "fields":
-                  job_dict
+                job_dict
             )
-
 
         return result
 
@@ -72,18 +73,16 @@ async def get_jobs(
         cur.close()
         conn.close()
 
+
 @router.post("/add_job")
-async def post_jobs(
-    job_data: AddJob,
-    request: Request
-):
+async def post_jobs(job_data: AddJob, request: Request):
     auth_header = request.headers.get("Authorization")
     if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
         raise HTTPException(status_code=403, detail="Unauthorized")
-    
+
     try:
         conn = get_db_connection()
-        
+
         with conn.cursor() as cursor:
             insert_query = """
                 INSERT INTO jobs (
@@ -107,38 +106,104 @@ async def post_jobs(
     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     RETURNING job_id;
             """
-            
+
             values = (
-    job_data.name,
-    job_data.url,
-    job_data.location,
-    job_data.country,
-    job_data.seniority,
-    job_data.description,
-    job_data.sport_list,
-    job_data.skills,
-    job_data.remote_office,
-    job_data.salary,
-    job_data.language,
-    job_data.company,
-    job_data.industry,
-    job_data.hours,
-    job_data.featured,
-    job_data.logo_permanent_url,
-    job_data.creation_date
-)
-            
+                job_data.name,
+                job_data.url,
+                job_data.location,
+                job_data.country,
+                job_data.seniority,
+                job_data.description,
+                job_data.sport_list,
+                job_data.skills,
+                job_data.remote_office,
+                job_data.salary,
+                job_data.language,
+                job_data.company,
+                job_data.industry,
+                job_data.hours,
+                job_data.featured,
+                job_data.logo_permanent_url,
+                job_data.creation_date,
+            )
+
             cursor.execute(insert_query, values)
             job_id = cursor.fetchone()[0]
             conn.commit()
-            
+
             return {"message": "Job created successfully", "job_id": job_id}
 
     except Exception as e:
         if conn:
             conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-    
+
     finally:
         if conn:
             conn.close()
+
+
+@router.get("/similar_jobs")
+async def get_similar_jobs(
+    request: Request,
+    exclude_id: int,
+    country: Optional[str] = None,
+    sport: Optional[str] = None,
+    seniority: Optional[str] = None,
+):
+    """
+    Get 3 random similar jobs based on filters while excluding a specific job.
+    Uses database-level randomization for efficiency.
+    """
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Base query with random ordering
+        query = "SELECT * FROM jobs WHERE job_id != %s AND creation_date >= NOW() - INTERVAL '1 month'"
+        params = [exclude_id]
+
+        # Add filters if they exist
+        if country:
+            query += " AND country = %s"
+            params.append(country)
+
+        if sport:
+            query += " AND sport_list = %s"
+            params.append(sport)
+
+        if seniority:
+            query += " AND seniority = %s"
+            params.append(seniority)
+
+        # Use PostgreSQL's RANDOM() for database-level randomization
+        # Limit to 3 results
+        query += " ORDER BY RANDOM() LIMIT 3"
+
+        # Execute query
+        cur.execute(query, tuple(params))
+
+        # Fetch results
+        jobs = cur.fetchall()
+
+        # Get column names
+        columns = [desc[0] for desc in cur.description]
+
+        # Convert to list of dictionaries
+        result = []
+        for job in jobs:
+            job_dict = {columns[i]: value for i, value in enumerate(job)}
+            result.append(job_dict)
+
+        return {"jobs": result, "count": len(result)}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        cur.close()
+        conn.close()
