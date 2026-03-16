@@ -77,6 +77,20 @@ class AddNewsletterSignup(BaseModel):
     source: Optional[str] = None
 
 
+class AddTestimonial(BaseModel):
+    name: str
+    email: Optional[str] = None
+    role: Optional[str] = None
+    company: Optional[str] = None
+    content: str
+    avatar_url: Optional[str] = None
+    rating: Optional[int] = None  # 1-5
+
+
+class ApproveTestimonial(BaseModel):
+    approved: bool = True
+
+
 class GetCompanies(BaseModel):
     limit: Optional[int] = (100,)
 

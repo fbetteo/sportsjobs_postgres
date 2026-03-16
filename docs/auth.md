@@ -9,6 +9,7 @@
 - If header is missing or invalid, endpoints usually return `403 Unauthorized`.
 - Webhook endpoint returns `401 Invalid access token` for token failures.
 - Health endpoints are public (`/health`, `/db-health`).
+- Testimonials submit/read endpoints are public (`POST /testimonials`, `GET /testimonials`), while moderation endpoints are protected (`/admin/testimonials*`).
 
 ## Protected Endpoint Pattern
 - Read `Authorization` header from request.

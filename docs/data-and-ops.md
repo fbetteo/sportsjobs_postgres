@@ -9,6 +9,7 @@
 - Table creation/migration scripts are in `database/`.
 - Historical SQL dumps are in `database_backups/`.
 - Several scripts handle initial import/migration from Airtable and maintenance tasks.
+- Testimonials table bootstrap script: `database/testimonials_create_table.py`.
 
 ## Operational Conventions
 - Open DB connection per request/script operation and close in `finally`.

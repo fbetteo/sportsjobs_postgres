@@ -13,6 +13,7 @@
 - Blog and webhook: `endpoints/blog.py`
 - Companies aggregate: `endpoints/companies.py`
 - Newsletter signups: `endpoints/newsletter.py`
+- Testimonials collection and moderation: `endpoints/testimonials.py`
 
 ## API Conventions Used Here
 - Many read operations are `POST` endpoints with a request body for filters/sort/limit.
