@@ -10,11 +10,13 @@
 - Historical SQL dumps are in `database_backups/`.
 - Several scripts handle initial import/migration from Airtable and maintenance tasks.
 - Testimonials table bootstrap script: `database/testimonials_create_table.py`.
+- Pending job postings bootstrap script: `database/pending_job_postings_create_table.py`.
 
 ## Operational Conventions
 - Open DB connection per request/script operation and close in `finally`.
 - Use `conn.commit()` on success and `conn.rollback()` on exceptions.
 - Avoid interpolating user input directly into SQL identifiers or clauses.
+- Run `python database/pending_job_postings_create_table.py` before deploying the pending job publishing endpoints.
 
 ## Change Guidance
 - Keep migration scripts explicit and reversible where practical.

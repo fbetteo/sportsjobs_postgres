@@ -8,6 +8,8 @@
 - API responses are plain JSON objects/lists mapped from SQL rows.
 - Query-style reads often use POST bodies (`filters`, `sort_by`, `sort_direction`, `limit`).
 - Authentication for protected routes uses `Authorization: Bearer <token>`.
+- Create paid-posting drafts with `POST /pending_job_postings`; the response is `{ "pending_job_id": "<uuid>" }`.
+- After checkout confirmation, publish with `POST /pending_job_postings/{pending_job_id}/publish` and `{ "stripe_session_id": "cs_..." }`; retries return the same `{ "job_id": 123 }`.
 
 ## If You Are Changing APIs
 - Minimize response shape changes unless requested.

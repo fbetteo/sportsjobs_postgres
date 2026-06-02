@@ -10,6 +10,7 @@
 - Webhook endpoint returns `401 Invalid access token` for token failures.
 - Health endpoints are public (`/health`, `/db-health`).
 - Testimonials submit/read endpoints are public (`POST /testimonials`, `GET /testimonials`), while moderation endpoints are protected (`/admin/testimonials*`).
+- Pending job draft creation and publishing endpoints are protected with the main token.
 
 ## Protected Endpoint Pattern
 - Read `Authorization` header from request.

@@ -1,11 +1,63 @@
-from fastapi import APIRouter, HTTPException, Request
 import os
+from typing import Optional
+from uuid import UUID, uuid4
+
+from fastapi import APIRouter, HTTPException, Request
+from psycopg2.errors import UniqueViolation
+from psycopg2.extras import Json
+
 from database.connection import get_db_connection
-from typing import Optional, List
-from datetime import datetime
-from models.schemas import GetJob, AddJob
+from models.schemas import AddJob, GetJob, PublishPendingJob
 
 router = APIRouter()
+
+
+def _insert_job(cursor, job_data: AddJob) -> int:
+    insert_query = """
+        INSERT INTO jobs (
+            name,
+            url,
+            location,
+            country,
+            seniority,
+            description,
+            sport_list,
+            skills,
+            remote_office,
+            salary,
+            language,
+            company,
+            industry,
+            hours,
+            featured,
+            logo_permanent_url,
+            creation_date
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING job_id;
+    """
+
+    values = (
+        job_data.name,
+        job_data.url,
+        job_data.location,
+        job_data.country,
+        job_data.seniority,
+        job_data.description,
+        job_data.sport_list,
+        job_data.skills,
+        job_data.remote_office,
+        job_data.salary,
+        job_data.language,
+        job_data.company,
+        job_data.industry,
+        job_data.hours,
+        job_data.featured,
+        job_data.logo_permanent_url,
+        job_data.creation_date,
+    )
+
+    cursor.execute(insert_query, values)
+    return cursor.fetchone()[0]
 
 
 @router.post("/jobs")
@@ -80,58 +132,117 @@ async def post_jobs(job_data: AddJob, request: Request):
     if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
         raise HTTPException(status_code=403, detail="Unauthorized")
 
+    conn = None
     try:
         conn = get_db_connection()
 
         with conn.cursor() as cursor:
-            insert_query = """
-                INSERT INTO jobs (
-        name,
-        url,
-        location,
-        country,
-        seniority,
-        description,
-        sport_list,
-        skills,
-        remote_office,
-        salary,
-        language,
-        company,
-        industry,
-        hours,
-        featured,
-        logo_permanent_url,
-        creation_date
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    RETURNING job_id;
-            """
-
-            values = (
-                job_data.name,
-                job_data.url,
-                job_data.location,
-                job_data.country,
-                job_data.seniority,
-                job_data.description,
-                job_data.sport_list,
-                job_data.skills,
-                job_data.remote_office,
-                job_data.salary,
-                job_data.language,
-                job_data.company,
-                job_data.industry,
-                job_data.hours,
-                job_data.featured,
-                job_data.logo_permanent_url,
-                job_data.creation_date,
-            )
-
-            cursor.execute(insert_query, values)
-            job_id = cursor.fetchone()[0]
+            job_id = _insert_job(cursor, job_data)
             conn.commit()
 
             return {"message": "Job created successfully", "job_id": job_id}
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        if conn:
+            conn.close()
+
+
+@router.post("/pending_job_postings")
+async def create_pending_job_posting(job_data: AddJob, request: Request):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        pending_job_id = uuid4()
+
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO pending_job_postings (id, job_data)
+                VALUES (%s, %s);
+                """,
+                (str(pending_job_id), Json(job_data.model_dump(mode="json"))),
+            )
+            conn.commit()
+
+        return {"pending_job_id": str(pending_job_id)}
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        if conn:
+            conn.close()
+
+
+@router.post("/pending_job_postings/{pending_job_id}/publish")
+async def publish_pending_job_posting(
+    pending_job_id: UUID, publish_data: PublishPendingJob, request: Request
+):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    conn = None
+    try:
+        conn = get_db_connection()
+
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT job_data, published_job_id
+                FROM pending_job_postings
+                WHERE id = %s
+                FOR UPDATE;
+                """,
+                (str(pending_job_id),),
+            )
+            pending_job = cursor.fetchone()
+
+            if not pending_job:
+                raise HTTPException(status_code=404, detail="Pending job posting not found")
+
+            job_data, published_job_id = pending_job
+            if published_job_id is not None:
+                conn.commit()
+                return {"job_id": published_job_id}
+
+            job_id = _insert_job(cursor, AddJob.model_validate(job_data))
+            cursor.execute(
+                """
+                UPDATE pending_job_postings
+                SET published_at = NOW(),
+                    published_job_id = %s,
+                    stripe_session_id = %s
+                WHERE id = %s;
+                """,
+                (job_id, publish_data.stripe_session_id, str(pending_job_id)),
+            )
+            conn.commit()
+
+            return {"job_id": job_id}
+
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        raise
+
+    except UniqueViolation:
+        if conn:
+            conn.rollback()
+        raise HTTPException(
+            status_code=409, detail="Stripe session has already been used"
+        )
 
     except Exception as e:
         if conn:
