@@ -57,6 +57,10 @@ class AddJob(BaseModel):
     slug: Optional[str] = None
 
 
+class PublishPendingJob(BaseModel):
+    stripe_session_id: str
+
+
 class GetJob(BaseModel):
     limit: Optional[int] = (100,)
     filters: Optional[dict] = None
