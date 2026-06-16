@@ -17,6 +17,7 @@ from endpoints import (
     blog,
     companies,
     testimonials,
+    stripe,
 )
 
 # Load environment variables
@@ -35,6 +36,7 @@ app.include_router(blog.router)
 app.include_router(companies.router)
 app.include_router(newsletter.router)
 app.include_router(testimonials.router)
+app.include_router(stripe.router)
 # # Database connection setup
 # def get_db_connection():
 #     return psycopg2.connect(
