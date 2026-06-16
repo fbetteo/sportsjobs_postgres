@@ -23,7 +23,9 @@ statements = [
         ADD COLUMN IF NOT EXISTS auth0_sub TEXT,
         ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT,
         ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT,
+        ADD COLUMN IF NOT EXISTS stripe_checkout_session_id TEXT,
         ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) DEFAULT 'none',
+        ADD COLUMN IF NOT EXISTS signup_funnel_id TEXT,
         ADD COLUMN IF NOT EXISTS signup_funnel_answers_json JSONB,
         ADD COLUMN IF NOT EXISTS signup_funnel_completed_at TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS paid_product_acknowledged_at TIMESTAMPTZ,
@@ -46,6 +48,16 @@ statements = [
     CREATE UNIQUE INDEX IF NOT EXISTS users_stripe_customer_id_unique_idx
     ON users (stripe_customer_id)
     WHERE stripe_customer_id IS NOT NULL;
+    """,
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS users_signup_funnel_id_unique_idx
+    ON users (signup_funnel_id)
+    WHERE signup_funnel_id IS NOT NULL;
+    """,
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS users_stripe_checkout_session_id_unique_idx
+    ON users (stripe_checkout_session_id)
+    WHERE stripe_checkout_session_id IS NOT NULL;
     """,
     """
     CREATE TABLE IF NOT EXISTS user_profiles (

@@ -26,6 +26,7 @@
 - `POST /pending_job_postings/{pending_job_id}/publish` publishes a draft once and returns its `job_id`.
 - `POST /users/signup_funnel` creates/updates a pre-auth user row by normalized email and stores signup funnel answers on both `users` and `user_profiles`.
 - `PATCH /users/signup_funnel/paid-product-acknowledgement` stores the paid-product acknowledgement timestamp by normalized email.
+- `POST /users/signup_funnel/claim` links the paid pre-auth row to the Auth0 user by checkout session, signup funnel ID, or Stripe IDs and returns the full profile shape.
 - `GET /users/me?auth0_sub=...` returns the Auth0-linked user profile or `404`.
 - `POST /users/ensure` idempotently creates/updates an Auth0-linked free user and returns the profile shape. It may also attach pre-auth fields: `signupFunnelAnswers`, `signupFunnelCompletedAt`, and `paidProductAcknowledgedAt`.
 - `PATCH /users/me/onboarding` stores onboarding answers and returns the profile shape. Required onboarding keys are `sportsInterests`, `jobSearchDuration`, `hardestPart`, `roleInterests`, and `roleUnsure`; `country` is optional.

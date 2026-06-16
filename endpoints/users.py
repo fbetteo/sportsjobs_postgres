@@ -10,6 +10,7 @@ from models.schemas import (
     EnsureUser,
     OnboardingUpdate,
     PaidProductAcknowledgement,
+    SignupFunnelClaim,
     SignupFunnel,
 )
 
@@ -26,12 +27,191 @@ def _normalize_email(email: str):
     return email.strip().lower()
 
 
+def _checkout_session_id(record: EnsureUser):
+    return record.stripe_checkout_session_id or record.session_id
+
+
+def _row_id(row):
+    if isinstance(row, dict):
+        return row["id"]
+    return row[0]
+
+
+def _find_user_for_signup_funnel(cursor, signup_funnel_id=None, email=None):
+    if signup_funnel_id:
+        cursor.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE signup_funnel_id = %s
+            LIMIT 1;
+            """,
+            (signup_funnel_id,),
+        )
+        user = cursor.fetchone()
+        if user:
+            return user
+
+    if email:
+        cursor.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE LOWER(email) = %s
+            ORDER BY auth0_sub IS NULL, id DESC
+            LIMIT 1;
+            """,
+            (_normalize_email(email),),
+        )
+        return cursor.fetchone()
+
+    return None
+
+
+def _find_user_for_auth_link(
+    cursor, auth0_sub=None, signup_funnel_id=None, stripe_checkout_session_id=None, email=None
+):
+    if auth0_sub:
+        cursor.execute(
+            "SELECT id FROM users WHERE auth0_sub = %s LIMIT 1;",
+            (auth0_sub,),
+        )
+        user = cursor.fetchone()
+        if user:
+            return user
+
+    if signup_funnel_id:
+        cursor.execute(
+            "SELECT id FROM users WHERE signup_funnel_id = %s LIMIT 1;",
+            (signup_funnel_id,),
+        )
+        user = cursor.fetchone()
+        if user:
+            return user
+
+    if stripe_checkout_session_id:
+        cursor.execute(
+            "SELECT id FROM users WHERE stripe_checkout_session_id = %s LIMIT 1;",
+            (stripe_checkout_session_id,),
+        )
+        user = cursor.fetchone()
+        if user:
+            return user
+
+    if email:
+        cursor.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE LOWER(email) = %s
+            ORDER BY auth0_sub IS NULL, id DESC
+            LIMIT 1;
+            """,
+            (_normalize_email(email),),
+        )
+        return cursor.fetchone()
+
+    return None
+
+
+def _find_user_for_claim(
+    cursor,
+    auth0_sub=None,
+    stripe_checkout_session_id=None,
+    signup_funnel_id=None,
+    stripe_customer_id=None,
+    stripe_subscription_id=None,
+    checkout_email=None,
+):
+    if auth0_sub:
+        cursor.execute(
+            "SELECT id, auth0_sub FROM users WHERE auth0_sub = %s LIMIT 1;",
+            (auth0_sub,),
+        )
+        user = cursor.fetchone()
+        if user:
+            return user
+
+    if stripe_checkout_session_id:
+        cursor.execute(
+            """
+            SELECT id, auth0_sub
+            FROM users
+            WHERE stripe_checkout_session_id = %s
+            LIMIT 1;
+            """,
+            (stripe_checkout_session_id,),
+        )
+        user = cursor.fetchone()
+        if user:
+            return user
+
+    if signup_funnel_id:
+        cursor.execute(
+            """
+            SELECT id, auth0_sub
+            FROM users
+            WHERE signup_funnel_id = %s
+            LIMIT 1;
+            """,
+            (signup_funnel_id,),
+        )
+        user = cursor.fetchone()
+        if user:
+            return user
+
+    if stripe_customer_id:
+        cursor.execute(
+            """
+            SELECT id, auth0_sub
+            FROM users
+            WHERE stripe_customer_id = %s
+            LIMIT 1;
+            """,
+            (stripe_customer_id,),
+        )
+        user = cursor.fetchone()
+        if user:
+            return user
+
+    if stripe_subscription_id:
+        cursor.execute(
+            """
+            SELECT id, auth0_sub
+            FROM users
+            WHERE stripe_subscription_id = %s
+            LIMIT 1;
+            """,
+            (stripe_subscription_id,),
+        )
+        user = cursor.fetchone()
+        if user:
+            return user
+
+    if checkout_email:
+        cursor.execute(
+            """
+            SELECT id, auth0_sub
+            FROM users
+            WHERE LOWER(email) = %s
+            ORDER BY auth0_sub IS NULL, id DESC
+            LIMIT 1;
+            """,
+            (_normalize_email(checkout_email),),
+        )
+        return cursor.fetchone()
+
+    return None
+
+
 def _profile_response(row):
     onboarding = row.get("answers_json") or {}
     return {
         "auth0Sub": row["auth0_sub"],
         "email": row["email"],
         "name": row.get("name"),
+        "signupFunnelId": row.get("signup_funnel_id"),
+        "stripeCheckoutSessionId": row.get("stripe_checkout_session_id"),
         "plan": row.get("plan") or "free",
         "subscriptionStatus": row.get("subscription_status") or "none",
         "onboardingCompletedAt": row.get("onboarding_completed_at"),
@@ -50,6 +230,8 @@ def _fetch_profile(cursor, auth0_sub: str):
             u.auth0_sub,
             u.email,
             u.name,
+            u.signup_funnel_id,
+            u.stripe_checkout_session_id,
             u.plan,
             u.subscription_status,
             u.signup_funnel_answers_json,
@@ -126,17 +308,9 @@ async def save_signup_funnel(record: SignupFunnel, request: Request):
     try:
         conn = get_db_connection()
         with conn.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT id
-                FROM users
-                WHERE LOWER(email) = %s
-                ORDER BY auth0_sub IS NULL, id DESC
-                LIMIT 1;
-                """,
-                (normalized_email,),
+            user = _find_user_for_signup_funnel(
+                cursor, record.signup_funnel_id, normalized_email
             )
-            user = cursor.fetchone()
 
             if user:
                 cursor.execute(
@@ -144,20 +318,28 @@ async def save_signup_funnel(record: SignupFunnel, request: Request):
                     UPDATE users
                     SET name = COALESCE(%s, name),
                         email = %s,
+                        signup_funnel_id = COALESCE(signup_funnel_id, %s),
                         signup_funnel_answers_json = %s,
                         signup_funnel_completed_at = NOW(),
                         updated_at = NOW()
                     WHERE id = %s;
                     """,
-                    (record.name, normalized_email, Json(answers_json), user[0]),
+                    (
+                        record.name,
+                        normalized_email,
+                        record.signup_funnel_id,
+                        Json(answers_json),
+                        _row_id(user),
+                    ),
                 )
-                user_id = user[0]
+                user_id = _row_id(user)
             else:
                 cursor.execute(
                     """
                     INSERT INTO users (
                         name,
                         email,
+                        signup_funnel_id,
                         plan,
                         subscription_status,
                         creation_date,
@@ -167,10 +349,15 @@ async def save_signup_funnel(record: SignupFunnel, request: Request):
                         created_at,
                         updated_at
                     )
-                    VALUES (%s, %s, 'free', 'none', NOW(), CURRENT_DATE, %s, NOW(), NOW(), NOW());
+                    VALUES (%s, %s, %s, 'free', 'none', NOW(), CURRENT_DATE, %s, NOW(), NOW(), NOW())
                     RETURNING id;
                     """,
-                    (record.name, normalized_email, Json(answers_json)),
+                    (
+                        record.name,
+                        normalized_email,
+                        record.signup_funnel_id,
+                        Json(answers_json),
+                    ),
                 )
                 user_id = cursor.fetchone()[0]
 
@@ -200,26 +387,101 @@ async def acknowledge_paid_product(
     try:
         conn = get_db_connection()
         with conn.cursor() as cursor:
+            user = _find_user_for_signup_funnel(
+                cursor, record.signup_funnel_id, normalized_email
+            )
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
             cursor.execute(
                 """
                 UPDATE users
                 SET paid_product_acknowledged_at = %s,
                     updated_at = NOW()
-                WHERE id = (
-                    SELECT id
-                    FROM users
-                    WHERE LOWER(email) = %s
-                    ORDER BY auth0_sub IS NULL, id DESC
-                    LIMIT 1
-                );
+                WHERE id = %s;
                 """,
-                (record.paid_product_acknowledged_at, normalized_email),
+                (record.paid_product_acknowledged_at, _row_id(user)),
             )
-            if cursor.rowcount == 0:
-                raise HTTPException(status_code=404, detail="User not found")
 
             conn.commit()
             return {"success": True}
+
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        raise
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        if conn:
+            conn.close()
+
+
+@router.post("/users/signup_funnel/claim")
+async def claim_signup_funnel(record: SignupFunnelClaim, request: Request):
+    _require_auth(request)
+
+    raw_final_email = record.final_email or record.email or record.checkout_email
+    final_email = _normalize_email(raw_final_email) if raw_final_email else None
+    final_name = record.final_name or record.name
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            user = _find_user_for_claim(
+                cursor,
+                auth0_sub=record.auth0_sub,
+                stripe_checkout_session_id=record.session_id,
+                signup_funnel_id=record.signup_funnel_id,
+                stripe_customer_id=record.stripe_customer_id,
+                stripe_subscription_id=record.stripe_subscription_id,
+                checkout_email=record.checkout_email,
+            )
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            existing_auth0_sub = user.get("auth0_sub")
+            if existing_auth0_sub and existing_auth0_sub != record.auth0_sub:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Paid signup row is already linked to another Auth0 subject",
+                )
+
+            cursor.execute(
+                """
+                UPDATE users
+                SET auth0_sub = %s,
+                    email = COALESCE(%s, email),
+                    name = COALESCE(%s, name),
+                    signup_funnel_id = COALESCE(signup_funnel_id, %s),
+                    stripe_checkout_session_id = COALESCE(stripe_checkout_session_id, %s),
+                    stripe_customer_id = COALESCE(stripe_customer_id, %s),
+                    stripe_subscription_id = COALESCE(stripe_subscription_id, %s),
+                    updated_at = NOW()
+                WHERE id = %s;
+                """,
+                (
+                    record.auth0_sub,
+                    final_email,
+                    final_name,
+                    record.signup_funnel_id,
+                    record.session_id,
+                    record.stripe_customer_id,
+                    record.stripe_subscription_id,
+                    user["id"],
+                ),
+            )
+            conn.commit()
+
+            profile = _fetch_profile(cursor, record.auth0_sub)
+            if not profile:
+                raise HTTPException(status_code=404, detail="User not found")
+            return profile
 
     except HTTPException:
         if conn:
@@ -268,82 +530,87 @@ async def ensure_user(record: EnsureUser, request: Request):
     try:
         conn = get_db_connection()
         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute(
-                """
-                INSERT INTO users (
-                    auth0_sub,
-                    email,
-                    name,
-                    plan,
-                    subscription_status,
-                    creation_date,
-                    signup_date,
-                    signup_funnel_answers_json,
-                    signup_funnel_completed_at,
-                    paid_product_acknowledged_at,
-                    created_at,
-                    updated_at
-                )
-                VALUES (
-                    %s,
-                    %s,
-                    %s,
-                    'free',
-                    'none',
-                    NOW(),
-                    CURRENT_DATE,
-                    %s,
-                    %s,
-                    %s,
-                    NOW(),
-                    NOW()
-                )
-                ON CONFLICT (auth0_sub)
-                WHERE auth0_sub IS NOT NULL
-                DO UPDATE SET
-                    email = EXCLUDED.email,
-                    name = EXCLUDED.name,
-                    signup_funnel_answers_json = COALESCE(
-                        EXCLUDED.signup_funnel_answers_json,
-                        users.signup_funnel_answers_json
-                    ),
-                    signup_funnel_completed_at = COALESCE(
-                        EXCLUDED.signup_funnel_completed_at,
-                        users.signup_funnel_completed_at
-                    ),
-                    paid_product_acknowledged_at = COALESCE(
-                        EXCLUDED.paid_product_acknowledged_at,
-                        users.paid_product_acknowledged_at
-                    ),
-                    updated_at = NOW()
-                WHERE users.email IS DISTINCT FROM EXCLUDED.email
-                   OR users.name IS DISTINCT FROM EXCLUDED.name
-                   OR (
-                        EXCLUDED.signup_funnel_answers_json IS NOT NULL
-                        AND users.signup_funnel_answers_json IS DISTINCT FROM EXCLUDED.signup_funnel_answers_json
-                   )
-                   OR (
-                        EXCLUDED.signup_funnel_completed_at IS NOT NULL
-                        AND users.signup_funnel_completed_at IS DISTINCT FROM EXCLUDED.signup_funnel_completed_at
-                   )
-                   OR (
-                        EXCLUDED.paid_product_acknowledged_at IS NOT NULL
-                        AND users.paid_product_acknowledged_at IS DISTINCT FROM EXCLUDED.paid_product_acknowledged_at
-                   )
-                RETURNING id;
-                """,
-                (
-                    record.auth0_sub,
-                    record.email,
-                    record.name,
-                    Json(record.signup_funnel_answers_json)
-                    if record.signup_funnel_answers_json is not None
-                    else None,
-                    record.signup_funnel_completed_at,
-                    record.paid_product_acknowledged_at,
-                ),
+            normalized_email = _normalize_email(record.email)
+            checkout_session_id = _checkout_session_id(record)
+            user = _find_user_for_auth_link(
+                cursor,
+                record.auth0_sub,
+                record.signup_funnel_id,
+                checkout_session_id,
+                normalized_email,
             )
-            cursor.fetchone()
+
+            if user:
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET auth0_sub = COALESCE(auth0_sub, %s),
+                        email = %s,
+                        name = %s,
+                        signup_funnel_id = COALESCE(signup_funnel_id, %s),
+                        stripe_checkout_session_id = COALESCE(stripe_checkout_session_id, %s),
+                        signup_funnel_answers_json = COALESCE(%s, signup_funnel_answers_json),
+                        signup_funnel_completed_at = COALESCE(%s, signup_funnel_completed_at),
+                        paid_product_acknowledged_at = COALESCE(%s, paid_product_acknowledged_at),
+                        updated_at = NOW()
+                    WHERE id = %s
+                      AND (auth0_sub IS NULL OR auth0_sub = %s);
+                    """,
+                    (
+                        record.auth0_sub,
+                        normalized_email,
+                        record.name,
+                        record.signup_funnel_id,
+                        checkout_session_id,
+                        Json(record.signup_funnel_answers_json)
+                        if record.signup_funnel_answers_json is not None
+                        else None,
+                        record.signup_funnel_completed_at,
+                        record.paid_product_acknowledged_at,
+                        _row_id(user),
+                        record.auth0_sub,
+                    ),
+                )
+                if cursor.rowcount == 0:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Matched user is already linked to another Auth0 subject",
+                    )
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO users (
+                        auth0_sub,
+                        email,
+                        name,
+                        signup_funnel_id,
+                        stripe_checkout_session_id,
+                        plan,
+                        subscription_status,
+                        creation_date,
+                        signup_date,
+                        signup_funnel_answers_json,
+                        signup_funnel_completed_at,
+                        paid_product_acknowledged_at,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, 'free', 'none', NOW(), CURRENT_DATE, %s, %s, %s, NOW(), NOW());
+                    """,
+                    (
+                        record.auth0_sub,
+                        normalized_email,
+                        record.name,
+                        record.signup_funnel_id,
+                        checkout_session_id,
+                        Json(record.signup_funnel_answers_json)
+                        if record.signup_funnel_answers_json is not None
+                        else None,
+                        record.signup_funnel_completed_at,
+                        record.paid_product_acknowledged_at,
+                    ),
+                )
+
             conn.commit()
 
             profile = _fetch_profile(cursor, record.auth0_sub)

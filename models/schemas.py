@@ -16,6 +16,11 @@ class EnsureUser(BaseModel):
     auth0_sub: str = Field(..., alias="auth0Sub", min_length=1)
     email: str = Field(..., min_length=1)
     name: Optional[str] = None
+    signup_funnel_id: Optional[str] = Field(default=None, alias="signupFunnelId")
+    stripe_checkout_session_id: Optional[str] = Field(
+        default=None, alias="stripeCheckoutSessionId"
+    )
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
     signup_funnel_answers_json: Optional[Dict[str, Any]] = Field(
         default=None, alias="signupFunnelAnswers"
     )
@@ -32,6 +37,7 @@ class SignupFunnel(BaseModel):
 
     name: Optional[str] = None
     email: str = Field(..., min_length=1)
+    signup_funnel_id: Optional[str] = Field(default=None, alias="signupFunnelId")
     source: Optional[str] = None
     onboarding: "OnboardingAnswers"
 
@@ -40,8 +46,33 @@ class PaidProductAcknowledgement(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     email: str = Field(..., min_length=1)
+    signup_funnel_id: Optional[str] = Field(default=None, alias="signupFunnelId")
     paid_product_acknowledged_at: datetime = Field(
         ..., alias="paidProductAcknowledgedAt"
+    )
+
+
+class CheckoutSync(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    session_id: str = Field(..., alias="sessionId", min_length=1)
+    signup_funnel_id: Optional[str] = Field(default=None, alias="signupFunnelId")
+
+
+class SignupFunnelClaim(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    auth0_sub: str = Field(..., alias="auth0Sub", min_length=1)
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    signup_funnel_id: Optional[str] = Field(default=None, alias="signupFunnelId")
+    email: Optional[str] = None
+    name: Optional[str] = None
+    final_email: Optional[str] = Field(default=None, alias="finalEmail")
+    final_name: Optional[str] = Field(default=None, alias="finalName")
+    checkout_email: Optional[str] = Field(default=None, alias="checkoutEmail")
+    stripe_customer_id: Optional[str] = Field(default=None, alias="stripeCustomerId")
+    stripe_subscription_id: Optional[str] = Field(
+        default=None, alias="stripeSubscriptionId"
     )
 
 
@@ -147,6 +178,10 @@ class UserProfileResponse(BaseModel):
     auth0_sub: str = Field(..., alias="auth0Sub")
     email: str
     name: Optional[str] = None
+    signup_funnel_id: Optional[str] = Field(default=None, alias="signupFunnelId")
+    stripe_checkout_session_id: Optional[str] = Field(
+        default=None, alias="stripeCheckoutSessionId"
+    )
     plan: str
     subscription_status: str = Field(..., alias="subscriptionStatus")
     onboarding_completed_at: Optional[datetime] = Field(

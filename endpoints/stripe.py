@@ -4,12 +4,19 @@ import stripe
 from fastapi import APIRouter, HTTPException, Request
 
 from database.connection import get_db_connection
+from models.schemas import CheckoutSync
 
 router = APIRouter()
 
 
 SUBSCRIPTION_STATUSES = {"trialing", "active", "past_due", "canceled"}
 PAST_DUE_STATUSES = {"incomplete", "incomplete_expired", "past_due", "unpaid"}
+
+
+def _require_auth(request: Request):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
 
 def _to_dict(stripe_object):
@@ -76,9 +83,34 @@ def _first_subscription_price(subscription):
     return _nested(item[0], "price", "id")
 
 
-def _find_user(cursor, auth0_sub=None, stripe_customer_id=None, email=None):
+def _find_user(
+    cursor,
+    auth0_sub=None,
+    signup_funnel_id=None,
+    stripe_checkout_session_id=None,
+    stripe_customer_id=None,
+    email=None,
+):
     if auth0_sub:
         cursor.execute("SELECT id, plan FROM users WHERE auth0_sub = %s;", (auth0_sub,))
+        user = cursor.fetchone()
+        if user:
+            return user
+
+    if signup_funnel_id:
+        cursor.execute(
+            "SELECT id, plan FROM users WHERE signup_funnel_id = %s;",
+            (signup_funnel_id,),
+        )
+        user = cursor.fetchone()
+        if user:
+            return user
+
+    if stripe_checkout_session_id:
+        cursor.execute(
+            "SELECT id, plan FROM users WHERE stripe_checkout_session_id = %s;",
+            (stripe_checkout_session_id,),
+        )
         user = cursor.fetchone()
         if user:
             return user
@@ -111,6 +143,8 @@ def _find_user(cursor, auth0_sub=None, stripe_customer_id=None, email=None):
 def _upsert_user_from_checkout(cursor, session):
     metadata = session.get("metadata") or {}
     auth0_sub = metadata.get("auth0_sub")
+    signup_funnel_id = metadata.get("signup_funnel_id") or metadata.get("signupFunnelId")
+    stripe_checkout_session_id = session.get("id")
     email = (
         metadata.get("email")
         or _nested(session, "customer_details", "email")
@@ -122,10 +156,23 @@ def _upsert_user_from_checkout(cursor, session):
     price_id = metadata.get("priceId")
     plan = _plan_from_price(price_id) or _plan_from_name(metadata.get("planName"))
 
-    if not auth0_sub and not stripe_customer_id and not email:
+    if (
+        not auth0_sub
+        and not signup_funnel_id
+        and not stripe_checkout_session_id
+        and not stripe_customer_id
+        and not email
+    ):
         return
 
-    user = _find_user(cursor, auth0_sub, stripe_customer_id, email)
+    user = _find_user(
+        cursor,
+        auth0_sub=auth0_sub,
+        signup_funnel_id=signup_funnel_id,
+        stripe_checkout_session_id=stripe_checkout_session_id,
+        stripe_customer_id=stripe_customer_id,
+        email=email,
+    )
     subscription_status = "active" if plan == "lifetime" else "active"
 
     if user:
@@ -135,6 +182,8 @@ def _upsert_user_from_checkout(cursor, session):
             SET auth0_sub = COALESCE(auth0_sub, %s),
                 email = COALESCE(%s, email),
                 name = COALESCE(%s, name),
+                signup_funnel_id = COALESCE(signup_funnel_id, %s),
+                stripe_checkout_session_id = COALESCE(stripe_checkout_session_id, %s),
                 stripe_customer_id = COALESCE(%s, stripe_customer_id),
                 stripe_subscription_id = COALESCE(%s, stripe_subscription_id),
                 plan = COALESCE(%s, plan, 'free'),
@@ -146,6 +195,8 @@ def _upsert_user_from_checkout(cursor, session):
                 auth0_sub,
                 email,
                 name,
+                signup_funnel_id,
+                stripe_checkout_session_id,
                 stripe_customer_id,
                 stripe_subscription_id,
                 plan,
@@ -155,15 +206,14 @@ def _upsert_user_from_checkout(cursor, session):
         )
         return
 
-    if not auth0_sub:
-        return
-
     cursor.execute(
         """
         INSERT INTO users (
             auth0_sub,
             email,
             name,
+            signup_funnel_id,
+            stripe_checkout_session_id,
             stripe_customer_id,
             stripe_subscription_id,
             plan,
@@ -173,22 +223,14 @@ def _upsert_user_from_checkout(cursor, session):
             created_at,
             updated_at
         )
-        VALUES (%s, %s, %s, %s, %s, COALESCE(%s, 'free'), %s, NOW(), CURRENT_DATE, NOW(), NOW())
-        ON CONFLICT (auth0_sub)
-        WHERE auth0_sub IS NOT NULL
-        DO UPDATE SET
-            email = COALESCE(EXCLUDED.email, users.email),
-            name = COALESCE(EXCLUDED.name, users.name),
-            stripe_customer_id = COALESCE(EXCLUDED.stripe_customer_id, users.stripe_customer_id),
-            stripe_subscription_id = COALESCE(EXCLUDED.stripe_subscription_id, users.stripe_subscription_id),
-            plan = EXCLUDED.plan,
-            subscription_status = EXCLUDED.subscription_status,
-            updated_at = NOW();
+        VALUES (%s, %s, %s, %s, %s, %s, %s, COALESCE(%s, 'free'), %s, NOW(), CURRENT_DATE, NOW(), NOW());
         """,
         (
             auth0_sub,
             email,
             name,
+            signup_funnel_id,
+            stripe_checkout_session_id,
             stripe_customer_id,
             stripe_subscription_id,
             plan,
@@ -200,13 +242,19 @@ def _upsert_user_from_checkout(cursor, session):
 def _apply_subscription_update(cursor, subscription, force_canceled=False):
     metadata = subscription.get("metadata") or {}
     auth0_sub = metadata.get("auth0_sub")
+    signup_funnel_id = metadata.get("signup_funnel_id") or metadata.get("signupFunnelId")
     stripe_customer_id = _stripe_id(subscription.get("customer"))
     stripe_subscription_id = subscription.get("id")
     price_id = _first_subscription_price(subscription)
     mapped_plan = _plan_from_price(price_id) or _plan_from_name(metadata.get("planName"))
     status = "canceled" if force_canceled else _subscription_status(subscription.get("status"))
 
-    user = _find_user(cursor, auth0_sub, stripe_customer_id)
+    user = _find_user(
+        cursor,
+        auth0_sub=auth0_sub,
+        signup_funnel_id=signup_funnel_id,
+        stripe_customer_id=stripe_customer_id,
+    )
     if not user:
         return
 
@@ -220,6 +268,7 @@ def _apply_subscription_update(cursor, subscription, force_canceled=False):
         """
         UPDATE users
         SET auth0_sub = COALESCE(auth0_sub, %s),
+            signup_funnel_id = COALESCE(signup_funnel_id, %s),
             stripe_customer_id = COALESCE(%s, stripe_customer_id),
             stripe_subscription_id = COALESCE(%s, stripe_subscription_id),
             plan = %s,
@@ -229,6 +278,7 @@ def _apply_subscription_update(cursor, subscription, force_canceled=False):
         """,
         (
             auth0_sub,
+            signup_funnel_id,
             stripe_customer_id,
             stripe_subscription_id,
             next_plan,
