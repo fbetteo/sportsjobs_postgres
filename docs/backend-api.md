@@ -8,6 +8,7 @@
 ## Current Route Groups
 - Health checks: `endpoints/health.py`
 - Users: `endpoints/users.py`
+- Stripe entitlement webhooks: `endpoints/stripe.py`
 - Alerts: `endpoints/alerts.py`
 - Jobs: `endpoints/jobs.py`
 - Blog and webhook: `endpoints/blog.py`
@@ -23,6 +24,12 @@
 - Route handlers own query construction and execution.
 - `POST /pending_job_postings` stores a job draft and returns its `pending_job_id`.
 - `POST /pending_job_postings/{pending_job_id}/publish` publishes a draft once and returns its `job_id`.
+- `POST /users/signup_funnel` creates/updates a pre-auth user row by normalized email and stores signup funnel answers on both `users` and `user_profiles`.
+- `PATCH /users/signup_funnel/paid-product-acknowledgement` stores the paid-product acknowledgement timestamp by normalized email.
+- `GET /users/me?auth0_sub=...` returns the Auth0-linked user profile or `404`.
+- `POST /users/ensure` idempotently creates/updates an Auth0-linked free user and returns the profile shape. It may also attach pre-auth fields: `signupFunnelAnswers`, `signupFunnelCompletedAt`, and `paidProductAcknowledgedAt`.
+- `PATCH /users/me/onboarding` stores onboarding answers and returns the profile shape. Required onboarding keys are `sportsInterests`, `jobSearchDuration`, `hardestPart`, `roleInterests`, and `roleUnsure`; `country` is optional.
+- `POST /stripe/webhook` syncs Stripe checkout/subscription events to user entitlement state.
 
 ## Change Guidance
 - Reuse existing schema patterns before adding new schema files.

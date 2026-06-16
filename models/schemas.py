@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from datetime import datetime, timezone, date
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class AddUser(BaseModel):
@@ -8,6 +8,160 @@ class AddUser(BaseModel):
     email: str
     plan: str
     creation_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class EnsureUser(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    auth0_sub: str = Field(..., alias="auth0Sub", min_length=1)
+    email: str = Field(..., min_length=1)
+    name: Optional[str] = None
+    signup_funnel_answers_json: Optional[Dict[str, Any]] = Field(
+        default=None, alias="signupFunnelAnswers"
+    )
+    signup_funnel_completed_at: Optional[datetime] = Field(
+        default=None, alias="signupFunnelCompletedAt"
+    )
+    paid_product_acknowledged_at: Optional[datetime] = Field(
+        default=None, alias="paidProductAcknowledgedAt"
+    )
+
+
+class SignupFunnel(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: Optional[str] = None
+    email: str = Field(..., min_length=1)
+    source: Optional[str] = None
+    onboarding: "OnboardingAnswers"
+
+
+class PaidProductAcknowledgement(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    email: str = Field(..., min_length=1)
+    paid_product_acknowledged_at: datetime = Field(
+        ..., alias="paidProductAcknowledgedAt"
+    )
+
+
+SPORTS_INTEREST_IDS = {
+    "football",
+    "soccer",
+    "basketball",
+    "hockey",
+    "baseball",
+    "tennis",
+    "golf",
+    "formula_1",
+    "betting_fantasy",
+    "esports",
+}
+
+JOB_SEARCH_DURATION_IDS = {
+    "just_started",
+    "few_weeks",
+    "few_months",
+    "feels_like_forever",
+}
+
+HARDEST_PART_IDS = {
+    "not_hearing_back",
+    "not_getting_interviews",
+    "too_much_competition",
+    "not_enough_jobs",
+    "lack_of_great_offers",
+}
+
+ROLE_INTEREST_IDS = {
+    "data_analyst",
+    "data_scientist",
+    "data_engineer",
+    "business_intelligence",
+    "analytics_engineer",
+    "software_engineer",
+    "machine_learning_ai",
+    "product_analyst",
+    "quant_betting_analyst",
+    "internship",
+}
+
+
+class OnboardingAnswers(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    sports_interests: List[str] = Field(..., alias="sportsInterests", min_length=1)
+    job_search_duration: str = Field(..., alias="jobSearchDuration", min_length=1)
+    hardest_part: str = Field(..., alias="hardestPart", min_length=1)
+    country: Optional[str] = None
+    role_interests: List[str] = Field(..., alias="roleInterests")
+    role_unsure: bool = Field(..., alias="roleUnsure")
+
+    @field_validator("sports_interests")
+    @classmethod
+    def validate_sports_interests(cls, value):
+        invalid_values = sorted(set(value) - SPORTS_INTEREST_IDS)
+        if invalid_values:
+            raise ValueError(f"Invalid sportsInterests values: {invalid_values}")
+        return value
+
+    @field_validator("job_search_duration")
+    @classmethod
+    def validate_job_search_duration(cls, value):
+        if value not in JOB_SEARCH_DURATION_IDS:
+            raise ValueError("Invalid jobSearchDuration value")
+        return value
+
+    @field_validator("hardest_part")
+    @classmethod
+    def validate_hardest_part(cls, value):
+        if value not in HARDEST_PART_IDS:
+            raise ValueError("Invalid hardestPart value")
+        return value
+
+    @field_validator("role_interests")
+    @classmethod
+    def validate_role_interests(cls, value):
+        invalid_values = sorted(set(value) - ROLE_INTEREST_IDS)
+        if invalid_values:
+            raise ValueError(f"Invalid roleInterests values: {invalid_values}")
+        return value
+
+    @model_validator(mode="after")
+    def validate_role_choice(self):
+        if not self.role_unsure and not self.role_interests:
+            raise ValueError("roleInterests can be empty only when roleUnsure is true")
+        return self
+
+
+class OnboardingUpdate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    auth0_sub: str = Field(..., alias="auth0Sub", min_length=1)
+    onboarding: OnboardingAnswers
+
+
+class UserProfileResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    auth0_sub: str = Field(..., alias="auth0Sub")
+    email: str
+    name: Optional[str] = None
+    plan: str
+    subscription_status: str = Field(..., alias="subscriptionStatus")
+    onboarding_completed_at: Optional[datetime] = Field(
+        default=None, alias="onboardingCompletedAt"
+    )
+    onboarding: Dict[str, Any] = Field(default_factory=dict)
+    signup_funnel_answers: Optional[Dict[str, Any]] = Field(
+        default=None, alias="signupFunnelAnswers"
+    )
+    signup_funnel_completed_at: Optional[datetime] = Field(
+        default=None, alias="signupFunnelCompletedAt"
+    )
+    paid_product_acknowledged_at: Optional[datetime] = Field(
+        default=None, alias="paidProductAcknowledgedAt"
+    )
 
 
 class AddAlert(BaseModel):
