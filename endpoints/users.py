@@ -251,6 +251,38 @@ def _fetch_profile(cursor, auth0_sub: str):
     return _profile_response(row)
 
 
+def _billing_response(row):
+    return {
+        "auth0_sub": row["auth0_sub"],
+        "email": row["email"],
+        "stripe_customer_id": row.get("stripe_customer_id"),
+        "stripe_subscription_id": row.get("stripe_subscription_id"),
+        "plan": row.get("plan") or "free",
+        "subscription_status": row.get("subscription_status") or "none",
+    }
+
+
+def _fetch_billing(cursor, auth0_sub: str):
+    cursor.execute(
+        """
+        SELECT
+            auth0_sub,
+            email,
+            stripe_customer_id,
+            stripe_subscription_id,
+            plan,
+            subscription_status
+        FROM users
+        WHERE auth0_sub = %s;
+        """,
+        (auth0_sub,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return None
+    return _billing_response(row)
+
+
 def _upsert_user_profile(cursor, user_id, onboarding, answers_json):
     cursor.execute(
         """
@@ -510,6 +542,30 @@ async def get_current_user(auth0_sub: str, request: Request):
             if not profile:
                 raise HTTPException(status_code=404, detail="User not found")
             return profile
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        if conn:
+            conn.close()
+
+
+@router.get("/users/billing")
+async def get_user_billing(auth0_sub: str, request: Request):
+    _require_auth(request)
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            billing = _fetch_billing(cursor, auth0_sub)
+            if not billing:
+                raise HTTPException(status_code=404, detail="User not found")
+            return billing
 
     except HTTPException:
         raise

@@ -12,7 +12,7 @@
 - Health endpoints are public (`/health`, `/db-health`).
 - Testimonials submit/read endpoints are public (`POST /testimonials`, `GET /testimonials`), while moderation endpoints are protected (`/admin/testimonials*`).
 - Pending job draft creation and publishing endpoints are protected with the main token.
-- Auth0 user/profile endpoints are protected with the main token; this backend trusts the frontend-provided `auth0Sub` only behind that shared bearer auth.
+- Auth0 user/profile and billing lookup endpoints are protected with the main token; this backend trusts the frontend-provided Auth0 subject only behind that shared bearer auth.
 - Stripe entitlement webhook uses Stripe signature verification and does not use the main bearer token.
 
 ## Protected Endpoint Pattern
