@@ -247,6 +247,12 @@ class AddAlert(BaseModel):
         return sorted(unique_values.values(), key=str.casefold)
 
 
+class CreateAlert(AddAlert):
+    model_config = ConfigDict(populate_by_name=True)
+
+    auth0_sub: str = Field(..., alias="auth0Sub", min_length=1)
+
+
 class AddBlog(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None

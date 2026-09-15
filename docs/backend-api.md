@@ -32,7 +32,9 @@
 - `POST /users/ensure` idempotently creates/updates an Auth0-linked free user and returns the profile shape. It may also attach pre-auth fields: `signupFunnelAnswers`, `signupFunnelCompletedAt`, and `paidProductAcknowledgedAt`.
 - `PATCH /users/me/onboarding` stores onboarding answers and returns the profile shape. Required onboarding keys are `sportsInterests`, `jobSearchDuration`, `hardestPart`, `roleInterests`, and `roleUnsure`; `country` is optional.
 - `POST /stripe/webhook` syncs Stripe checkout/subscription events to user entitlement state.
-- `POST /add_alert` normalizes email/filter arrays, stores PostgreSQL as the alert source of truth, and returns an existing record when the same email submits identical filters.
+- `POST /alerts` (also available as `POST /add_alert`) accepts `auth0Sub` and filter arrays. It looks up the signed-in user's login email/name and returns an existing record when filters are identical. An Auth0-linked account qualifies for alerts regardless of subscription plan.
+- `GET /alerts?auth0_sub=...` lists that user's alerts. `DELETE /alerts/{alert_id}?auth0_sub=...` deletes only an alert belonging to the same login email.
+- Settings now creates alerts with country, `seniority: ["Internship"]` when selected, work mode, and sport. The API and existing table still accept/store other legacy filter fields; the sender requires every selected filter to match and accepts any selected value within each filter.
 
 ## Change Guidance
 - Reuse existing schema patterns before adding new schema files.
