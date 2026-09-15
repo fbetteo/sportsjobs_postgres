@@ -32,6 +32,7 @@
 - `POST /users/ensure` idempotently creates/updates an Auth0-linked free user and returns the profile shape. It may also attach pre-auth fields: `signupFunnelAnswers`, `signupFunnelCompletedAt`, and `paidProductAcknowledgedAt`.
 - `PATCH /users/me/onboarding` stores onboarding answers and returns the profile shape. Required onboarding keys are `sportsInterests`, `jobSearchDuration`, `hardestPart`, `roleInterests`, and `roleUnsure`; `country` is optional.
 - `POST /stripe/webhook` syncs Stripe checkout/subscription events to user entitlement state.
+- `POST /add_alert` normalizes email/filter arrays, stores PostgreSQL as the alert source of truth, and returns an existing record when the same email submits identical filters.
 
 ## Change Guidance
 - Reuse existing schema patterns before adding new schema files.

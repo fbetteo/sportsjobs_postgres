@@ -208,6 +208,43 @@ class AddAlert(BaseModel):
     skills: Optional[List[str]] = Field(default_factory=list)
     remote_office: Optional[List[str]] = Field(default_factory=list)
     hours: Optional[List[str]] = Field(default_factory=list)
+    industry: Optional[List[str]] = Field(default_factory=list)
+    type: Optional[List[str]] = Field(default_factory=list)
+    job_area: Optional[List[str]] = Field(default_factory=list)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def normalize_alert_name(cls, value):
+        return str(value or "").strip()
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_alert_email(cls, value):
+        return str(value or "").strip().casefold()
+
+    @field_validator(
+        "country",
+        "seniority",
+        "sport_list",
+        "skills",
+        "remote_office",
+        "hours",
+        "industry",
+        "type",
+        "job_area",
+        mode="before",
+    )
+    @classmethod
+    def normalize_alert_filters(cls, value):
+        if value is None:
+            return []
+        values = value if isinstance(value, (list, tuple, set)) else [value]
+        unique_values = {}
+        for item in values:
+            cleaned = str(item or "").strip()
+            if cleaned:
+                unique_values.setdefault(cleaned.casefold(), cleaned)
+        return sorted(unique_values.values(), key=str.casefold)
 
 
 class AddBlog(BaseModel):
