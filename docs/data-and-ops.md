@@ -12,6 +12,7 @@
 - Testimonials table bootstrap script: `database/testimonials_create_table.py`.
 - Pending job postings bootstrap script: `database/pending_job_postings_create_table.py`.
 - Auth0 user refactor and future user-feature tables script: `database/users_refactor_2026.py`.
+- Testimonial request tracking migration: `database/testimonial_request_tracking.py`. Run it before enabling the scraper repo's daily `testimonial_request_sequence.py`. It adds `users.testimonial_request_sent_at` and does not send email.
 
 ## Operational Conventions
 - Open DB connection per request/script operation and close in `finally`.
