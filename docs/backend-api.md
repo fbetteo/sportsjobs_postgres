@@ -31,6 +31,10 @@
 - `GET /users/billing?auth0_sub=...` returns billing identifiers for authenticated server-side subscription operations. It matches only by `auth0_sub`, includes email as a legacy Stripe fallback field, and returns `404` when the user does not exist.
 - `POST /users/ensure` idempotently creates/updates an Auth0-linked free user and returns the profile shape. It may also attach pre-auth fields: `signupFunnelAnswers`, `signupFunnelCompletedAt`, and `paidProductAcknowledgedAt`.
 - `PATCH /users/me/onboarding` stores onboarding answers and returns the profile shape. Required onboarding keys are `sportsInterests`, `jobSearchDuration`, `hardestPart`, `roleInterests`, and `roleUnsure`; `country` is optional.
+- `PATCH /users/me/linkedin` stores an optional HTTPS LinkedIn profile URL in `user_profiles.linkedin_url` and returns the profile.
+- `GET /users/me/cv?auth0_sub=...` returns the latest CV metadata, including its private R2 key, to the authenticated frontend server.
+- `POST /users/me/cv` records a new PDF upload and replaces existing CV metadata for that Auth0 user. It returns the old private R2 keys for cleanup.
+- `DELETE /users/me/cv?auth0_sub=...` removes that user's CV metadata and returns private R2 keys for cleanup. The frontend server owns R2 file operations.
 - `POST /stripe/webhook` syncs Stripe checkout/subscription events to user entitlement state.
 - `POST /alerts` (also available as `POST /add_alert`) accepts `auth0Sub` and filter arrays. It looks up the signed-in user's login email/name and returns an existing record when filters are identical. An Auth0-linked account qualifies for alerts regardless of subscription plan.
 - `GET /alerts?auth0_sub=...` lists that user's alerts. `DELETE /alerts/{alert_id}?auth0_sub=...` deletes only an alert belonging to the same login email.

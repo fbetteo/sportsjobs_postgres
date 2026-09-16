@@ -8,6 +8,8 @@ from database.connection import get_db_connection
 from models.schemas import (
     AddUser,
     EnsureUser,
+    LinkedinUpdate,
+    CvUploadRecord,
     OnboardingUpdate,
     PaidProductAcknowledgement,
     SignupFunnelClaim,
@@ -210,6 +212,7 @@ def _profile_response(row):
         "auth0Sub": row["auth0_sub"],
         "email": row["email"],
         "name": row.get("name"),
+        "linkedinUrl": row.get("linkedin_url"),
         "signupFunnelId": row.get("signup_funnel_id"),
         "stripeCheckoutSessionId": row.get("stripe_checkout_session_id"),
         "plan": row.get("plan") or "free",
@@ -238,6 +241,7 @@ def _fetch_profile(cursor, auth0_sub: str):
             u.signup_funnel_completed_at,
             u.paid_product_acknowledged_at,
             p.onboarding_completed_at,
+            p.linkedin_url,
             p.answers_json
         FROM users u
         LEFT JOIN user_profiles p ON p.user_id = u.id
@@ -726,6 +730,139 @@ async def update_onboarding(record: OnboardingUpdate, request: Request):
             conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+    finally:
+        if conn:
+            conn.close()
+
+
+@router.patch("/users/me/linkedin")
+async def update_linkedin(record: LinkedinUpdate, request: Request):
+    _require_auth(request)
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                INSERT INTO user_profiles (user_id, linkedin_url)
+                SELECT id, %s FROM users WHERE auth0_sub = %s
+                ON CONFLICT (user_id) DO UPDATE
+                SET linkedin_url = EXCLUDED.linkedin_url, updated_at = NOW();
+                """,
+                (record.linkedin_url, record.auth0_sub),
+            )
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail="User not found")
+            conn.commit()
+            return _fetch_profile(cursor, record.auth0_sub)
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        raise
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail="Could not save LinkedIn URL")
+    finally:
+        if conn:
+            conn.close()
+
+
+@router.get("/users/me/cv")
+async def get_cv(auth0_sub: str, request: Request):
+    _require_auth(request)
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                SELECT c.id, c.s3_key, c.filename, c.size_bytes, c.created_at
+                FROM cv_uploads c JOIN users u ON u.id = c.user_id
+                WHERE u.auth0_sub = %s
+                ORDER BY c.created_at DESC, c.id DESC LIMIT 1;
+                """,
+                (auth0_sub,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            cursor.execute(
+                """
+                SELECT c.s3_key FROM cv_uploads c
+                JOIN users u ON u.id = c.user_id
+                WHERE u.auth0_sub = %s;
+                """,
+                (auth0_sub,),
+            )
+            return {**dict(row), "all_keys": [item["s3_key"] for item in cursor.fetchall()]}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Could not load resume")
+    finally:
+        if conn:
+            conn.close()
+
+
+@router.post("/users/me/cv")
+async def save_cv(record: CvUploadRecord, request: Request):
+    _require_auth(request)
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("SELECT id FROM users WHERE auth0_sub = %s FOR UPDATE;", (record.auth0_sub,))
+            user = cursor.fetchone()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            cursor.execute("SELECT s3_key FROM cv_uploads WHERE user_id = %s;", (user["id"],))
+            old_keys = [row["s3_key"] for row in cursor.fetchall()]
+            cursor.execute("DELETE FROM cv_uploads WHERE user_id = %s;", (user["id"],))
+            cursor.execute(
+                """
+                INSERT INTO cv_uploads (user_id, s3_key, filename, content_type, size_bytes)
+                VALUES (%s, %s, %s, 'application/pdf', %s)
+                RETURNING id, filename, size_bytes, created_at;
+                """,
+                (user["id"], record.s3_key, record.filename, record.size_bytes),
+            )
+            saved = dict(cursor.fetchone())
+            conn.commit()
+            return {"cv": saved, "oldKeys": old_keys}
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        raise
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail="Could not save resume")
+    finally:
+        if conn:
+            conn.close()
+
+
+@router.delete("/users/me/cv")
+async def delete_cv(auth0_sub: str, request: Request):
+    _require_auth(request)
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                DELETE FROM cv_uploads c USING users u
+                WHERE c.user_id = u.id AND u.auth0_sub = %s
+                RETURNING c.s3_key;
+                """,
+                (auth0_sub,),
+            )
+            keys = [row["s3_key"] for row in cursor.fetchall()]
+            conn.commit()
+            return {"keys": keys}
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail="Could not delete resume")
     finally:
         if conn:
             conn.close()

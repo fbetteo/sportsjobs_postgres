@@ -133,6 +133,10 @@ statements = [
     );
     """,
     """
+    ALTER TABLE user_profiles
+        ADD COLUMN IF NOT EXISTS linkedin_url TEXT;
+    """,
+    """
     CREATE INDEX IF NOT EXISTS saved_jobs_user_id_idx ON saved_jobs (user_id);
     """,
     """

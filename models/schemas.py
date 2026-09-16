@@ -172,6 +172,35 @@ class OnboardingUpdate(BaseModel):
     onboarding: OnboardingAnswers
 
 
+class LinkedinUpdate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    auth0_sub: str = Field(..., alias="auth0Sub", min_length=1)
+    linkedin_url: Optional[str] = Field(default=None, alias="linkedinUrl", max_length=500)
+
+    @field_validator("linkedin_url")
+    @classmethod
+    def validate_linkedin_url(cls, value):
+        if value is None or not value.strip():
+            return None
+        from urllib.parse import urlparse
+
+        value = value.strip()
+        parsed = urlparse(value)
+        if parsed.scheme != "https" or parsed.hostname not in {"linkedin.com", "www.linkedin.com"}:
+            raise ValueError("Enter a LinkedIn https:// URL")
+        return value
+
+
+class CvUploadRecord(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    auth0_sub: str = Field(..., alias="auth0Sub", min_length=1)
+    s3_key: str = Field(..., alias="s3Key", min_length=1)
+    filename: str = Field(..., min_length=1, max_length=255)
+    size_bytes: int = Field(..., alias="sizeBytes", gt=0, le=5 * 1024 * 1024)
+
+
 class UserProfileResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
