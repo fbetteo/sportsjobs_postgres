@@ -13,6 +13,7 @@
 - Testimonials submit/read endpoints are public (`POST /testimonials`, `GET /testimonials`), while moderation endpoints are protected (`/admin/testimonials*`).
 - Pending job draft creation and publishing endpoints are protected with the main token.
 - Auth0 user/profile and billing lookup endpoints are protected with the main token; this backend trusts the frontend-provided Auth0 subject only behind that shared bearer auth.
+- Alert create/list/delete endpoints use the same backend token and Auth0 subject supplied by the authenticated frontend server route. The browser cannot choose an alert email; the backend uses the email stored for that Auth0 user. Alerts are available to any Auth0-linked user, regardless of subscription plan.
 - Stripe entitlement webhook uses Stripe signature verification and does not use the main bearer token.
 
 ## Protected Endpoint Pattern
