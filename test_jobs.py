@@ -1,11 +1,12 @@
 import asyncio
 import sqlite3
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from starlette.requests import Request
 
-from endpoints.jobs import get_jobs
+from endpoints.jobs import get_jobs, get_similar_jobs
 from models.schemas import GetJob
 
 
@@ -16,6 +17,7 @@ class SqliteCursor:
         self.cursor = conn.cursor()
 
     def execute(self, query, params):
+        query = query.replace("NOW() - INTERVAL '1 month'", "datetime('now', '-1 month')")
         self.cursor.execute(query.replace("%s", "?"), params)
 
     def fetchall(self):
@@ -55,12 +57,20 @@ class SqliteConnection:
         pass
 
 
-def fetch_jobs(conn, **options):
+def call_endpoint(conn, endpoint, *args, **kwargs):
     request = Request({"type": "http", "headers": [(b"authorization", b"Bearer test-token")]})
     with patch.dict("os.environ", {"HEADER_AUTHORIZATION": "test-token"}), patch(
         "endpoints.jobs.get_db_connection", return_value=conn
     ):
-        return asyncio.run(get_jobs(GetJob(**options), request))
+        return asyncio.run(endpoint(request, *args, **kwargs))
+
+
+def fetch_jobs(conn, **options):
+    return call_endpoint(conn, lambda request: get_jobs(GetJob(**options), request))
+
+
+def fetch_similar_jobs(conn, **options):
+    return call_endpoint(conn, get_similar_jobs, **options)["jobs"]
 
 
 class GetJobsPaginationTests(unittest.TestCase):
@@ -98,6 +108,29 @@ class GetJobsPaginationTests(unittest.TestCase):
         self.assertNotIn("url", list_job)
         self.assertEqual(full_job["description"], "long text")
         self.assertEqual(full_job["url"], "https://apply")
+
+
+class GetSimilarJobsTests(unittest.TestCase):
+    def setUp(self):
+        self.conn = SqliteConnection()
+        recent = (datetime.now(timezone.utc) - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
+        old = (datetime.now(timezone.utc) - timedelta(days=60)).strftime("%Y-%m-%d %H:%M:%S")
+        for job_id in range(1, 6):
+            self.conn.add_job(job_id, recent)
+        self.conn.add_job(99, old)
+
+    def test_returns_recent_list_fields_up_to_limit_without_exclude_id(self):
+        jobs = fetch_similar_jobs(self.conn, limit=4)
+
+        self.assertEqual(len(jobs), 4)
+        self.assertNotIn(99, [job["job_id"] for job in jobs])
+        self.assertNotIn("description", jobs[0])
+        self.assertNotIn("url", jobs[0])
+
+    def test_exclude_id_still_removes_that_job(self):
+        jobs = fetch_similar_jobs(self.conn, exclude_id=3, limit=10)
+
+        self.assertEqual(sorted(job["job_id"] for job in jobs), [1, 2, 4, 5])
 
 
 if __name__ == "__main__":
