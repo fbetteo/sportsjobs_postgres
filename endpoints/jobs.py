@@ -11,6 +11,12 @@ from models.schemas import AddJob, GetJob, PublishPendingJob
 
 router = APIRouter()
 
+# Columns a job list card needs. Excludes the heavy description and the apply url.
+JOB_LIST_COLUMNS = (
+    "job_id, slug, name, creation_date, company, location, salary, country, "
+    "seniority, remote, remote_office, sport_list, job_area, logo_permanent_url"
+)
+
 
 def _insert_job(cursor, job_data: AddJob) -> int:
     insert_query = """
@@ -71,7 +77,8 @@ async def get_jobs(query_options: GetJob, request: Request):
 
         data = query_options.model_dump()
         # Base query
-        query = "SELECT * FROM jobs WHERE 1=1"
+        select_columns = JOB_LIST_COLUMNS if query_options.list_fields_only else "*"
+        query = f"SELECT {select_columns} FROM jobs WHERE 1=1"
         params = []
 
         # Define string columns that should use case-insensitive comparison. I have other string columns as filters but currently no need to lower as the regular parameter is in the right format. Maybe I should do it anyway??
@@ -87,14 +94,15 @@ async def get_jobs(query_options: GetJob, request: Request):
                         query += f" AND {key} = %s"
                     params.append(value)
 
-        # Add sorting
+        # Add sorting. job_id breaks ties so OFFSET pages never overlap or skip jobs.
         query += (
-            f" ORDER BY {query_options.sort_by} {query_options.sort_direction.upper()}"
+            f" ORDER BY {query_options.sort_by} {query_options.sort_direction.upper()},"
+            " job_id DESC"
         )
 
-        # Add limit
-        query += " LIMIT %s"
-        params.append(query_options.limit)
+        # Add pagination
+        query += " LIMIT %s OFFSET %s"
+        params.extend([query_options.limit, query_options.offset])
 
         # Execute query
         cur.execute(query, tuple(params))

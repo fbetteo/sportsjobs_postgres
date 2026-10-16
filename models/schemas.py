@@ -323,8 +323,11 @@ class PublishPendingJob(BaseModel):
 
 
 class GetJob(BaseModel):
-    limit: Optional[int] = (100,)
+    limit: Optional[int] = 100
+    offset: int = Field(default=0, ge=0)
     filters: Optional[dict] = None
+    # Job lists only need card fields; the job detail page needs the full row.
+    list_fields_only: bool = False
     sort_by: str = "creation_date"
     sort_direction: str = "desc"
 
