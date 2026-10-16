@@ -2,7 +2,7 @@ import os
 from typing import Optional
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from psycopg2.errors import UniqueViolation
 from psycopg2.extras import Json
 
@@ -265,14 +265,16 @@ async def publish_pending_job_posting(
 @router.get("/similar_jobs")
 async def get_similar_jobs(
     request: Request,
-    exclude_id: int,
+    exclude_id: Optional[int] = None,
     country: Optional[str] = None,
     sport: Optional[str] = None,
     seniority: Optional[str] = None,
+    limit: int = Query(default=3, ge=1, le=10),
 ):
     """
-    Get 3 random similar jobs based on filters while excluding a specific job.
-    Uses database-level randomization for efficiency.
+    Get random recent jobs matching the filters, optionally excluding one job.
+    Uses database-level randomization for efficiency. The frontend omits
+    exclude_id so one CDN-cached response serves every job page in a country.
     """
     auth_header = request.headers.get("Authorization")
     if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
@@ -283,8 +285,15 @@ async def get_similar_jobs(
         cur = conn.cursor()
 
         # Base query with random ordering
-        query = "SELECT * FROM jobs WHERE job_id != %s AND creation_date >= NOW() - INTERVAL '1 month'"
-        params = [exclude_id]
+        query = (
+            f"SELECT {JOB_LIST_COLUMNS} FROM jobs"
+            " WHERE creation_date >= NOW() - INTERVAL '1 month'"
+        )
+        params = []
+
+        if exclude_id is not None:
+            query += " AND job_id != %s"
+            params.append(exclude_id)
 
         # Add filters if they exist
         if country:
@@ -300,8 +309,8 @@ async def get_similar_jobs(
             params.append(seniority)
 
         # Use PostgreSQL's RANDOM() for database-level randomization
-        # Limit to 3 results
-        query += " ORDER BY RANDOM() LIMIT 3"
+        query += " ORDER BY RANDOM() LIMIT %s"
+        params.append(limit)
 
         # Execute query
         cur.execute(query, tuple(params))

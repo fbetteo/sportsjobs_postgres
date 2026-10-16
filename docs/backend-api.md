@@ -23,6 +23,7 @@
 - Most endpoints return plain dict/list structures from SQL row mapping.
 - Route handlers own query construction and execution.
 - `POST /jobs` accepts `limit` and `offset` for paging; results sort by `sort_by` then `job_id DESC` so pages are stable. With `list_fields_only: true` it returns only job card columns (no `description`, `skills`, or apply `url`); the default returns the full row for the job detail page.
+- `GET /similar_jobs` returns `limit` (default 3, max 10) random jobs from the last month as job card columns. `exclude_id` is optional; the frontend omits it so responses are cacheable per filter combination and drops the current job itself.
 - `POST /pending_job_postings` stores a job draft and returns its `pending_job_id`.
 - `POST /pending_job_postings/{pending_job_id}/publish` publishes a draft once and returns its `job_id`.
 - `POST /users/signup_funnel` creates/updates a pre-auth user row by normalized email and stores signup funnel answers on both `users` and `user_profiles`.
