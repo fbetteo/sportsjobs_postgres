@@ -58,7 +58,7 @@ def require_backend_auth(request: Request) -> None:
 
 @router.post("/alerts")
 @router.post("/add_alert")
-async def add_alert(record: CreateAlert, request: Request):
+def add_alert(record: CreateAlert, request: Request):
     require_backend_auth(request)
 
     conn = None
@@ -156,7 +156,7 @@ async def add_alert(record: CreateAlert, request: Request):
 
 
 @router.get("/alerts")
-async def list_alerts(auth0_sub: str, request: Request):
+def list_alerts(auth0_sub: str, request: Request):
     require_backend_auth(request)
     conn = None
     cursor = None
@@ -187,7 +187,7 @@ async def list_alerts(auth0_sub: str, request: Request):
 
 
 @router.delete("/alerts/{alert_id}")
-async def delete_alert(alert_id: int, auth0_sub: str, request: Request):
+def delete_alert(alert_id: int, auth0_sub: str, request: Request):
     require_backend_auth(request)
     conn = None
     cursor = None

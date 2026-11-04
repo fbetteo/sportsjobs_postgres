@@ -8,7 +8,7 @@ from models.schemas import GetCompanies
 router = APIRouter()
 
 @router.post("/companies")
-async def get_companies(
+def get_companies(
     query_options: GetCompanies ,request: Request):
     auth_header = request.headers.get("Authorization")
     if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":

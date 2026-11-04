@@ -67,7 +67,7 @@ def _insert_job(cursor, job_data: AddJob) -> int:
 
 
 @router.post("/jobs")
-async def get_jobs(query_options: GetJob, request: Request):
+def get_jobs(query_options: GetJob, request: Request):
     auth_header = request.headers.get("Authorization")
     if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -135,7 +135,7 @@ async def get_jobs(query_options: GetJob, request: Request):
 
 
 @router.post("/add_job")
-async def post_jobs(job_data: AddJob, request: Request):
+def post_jobs(job_data: AddJob, request: Request):
     auth_header = request.headers.get("Authorization")
     if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -161,7 +161,7 @@ async def post_jobs(job_data: AddJob, request: Request):
 
 
 @router.post("/pending_job_postings")
-async def create_pending_job_posting(job_data: AddJob, request: Request):
+def create_pending_job_posting(job_data: AddJob, request: Request):
     auth_header = request.headers.get("Authorization")
     if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -194,7 +194,7 @@ async def create_pending_job_posting(job_data: AddJob, request: Request):
 
 
 @router.post("/pending_job_postings/{pending_job_id}/publish")
-async def publish_pending_job_posting(
+def publish_pending_job_posting(
     pending_job_id: UUID, publish_data: PublishPendingJob, request: Request
 ):
     auth_header = request.headers.get("Authorization")
@@ -263,7 +263,7 @@ async def publish_pending_job_posting(
 
 
 @router.get("/similar_jobs")
-async def get_similar_jobs(
+def get_similar_jobs(
     request: Request,
     exclude_id: Optional[int] = None,
     country: Optional[str] = None,

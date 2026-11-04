@@ -10,7 +10,7 @@ async def health_check():
 
 
 @router.get("/db-health")
-async def db_health_check():
+def db_health_check():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()

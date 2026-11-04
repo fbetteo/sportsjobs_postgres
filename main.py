@@ -19,12 +19,14 @@ from endpoints import (
     testimonials,
     stripe,
 )
+from telemetry import setup_tracing
 
 # Load environment variables
 load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI()
+setup_tracing(app)
 
 
 # Include routers
