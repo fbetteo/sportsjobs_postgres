@@ -1,4 +1,3 @@
-import asyncio
 import sqlite3
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -62,7 +61,7 @@ def call_endpoint(conn, endpoint, *args, **kwargs):
     with patch.dict("os.environ", {"HEADER_AUTHORIZATION": "test-token"}), patch(
         "endpoints.jobs.get_db_connection", return_value=conn
     ):
-        return asyncio.run(endpoint(request, *args, **kwargs))
+        return endpoint(request, *args, **kwargs)
 
 
 def fetch_jobs(conn, **options):

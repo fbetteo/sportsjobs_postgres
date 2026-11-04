@@ -2,6 +2,7 @@ import os
 
 import stripe
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 
 from database.connection import get_db_connection
 from models.schemas import CheckoutSync
@@ -329,6 +330,12 @@ async def stripe_webhook(request: Request):
     event_type = event.get("type")
     data_object = _to_dict(_nested(event, "data", "object")) or {}
 
+    # psycopg2 blocks, so keep it off the event loop that serves other requests.
+    await run_in_threadpool(_apply_stripe_event, event_type, data_object)
+    return {"received": True}
+
+
+def _apply_stripe_event(event_type, data_object):
     conn = None
     try:
         conn = get_db_connection()
@@ -357,5 +364,3 @@ async def stripe_webhook(request: Request):
     finally:
         if conn:
             conn.close()
-
-    return {"received": True}

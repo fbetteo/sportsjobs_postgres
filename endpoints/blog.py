@@ -9,7 +9,7 @@ router = APIRouter()
 
 
 @router.post("/blog")
-async def get_blogposts(query_options: GetBlog, request: Request):
+def get_blogposts(query_options: GetBlog, request: Request):
     auth_header = request.headers.get("Authorization")
     if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -69,7 +69,7 @@ async def get_blogposts(query_options: GetBlog, request: Request):
 
 
 @router.post("/add_blog")
-async def post_blog(blog_data: AddBlog, request: Request):
+def post_blog(blog_data: AddBlog, request: Request):
     auth_header = request.headers.get("Authorization")
     if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -120,7 +120,7 @@ async def post_blog(blog_data: AddBlog, request: Request):
 
 
 @router.post("/webhook")
-async def blog_webhook(webhook_payload: WebhookPayload, request: Request):
+def blog_webhook(webhook_payload: WebhookPayload, request: Request):
     """
     Webhook endpoint to receive published articles and insert them into the blog table.
     Uses Bearer token authentication with WEBHOOK_ACCESS_TOKEN environment variable.

@@ -330,7 +330,7 @@ def _upsert_user_profile(cursor, user_id, onboarding, answers_json):
 
 
 @router.post("/users/signup_funnel")
-async def save_signup_funnel(record: SignupFunnel, request: Request):
+def save_signup_funnel(record: SignupFunnel, request: Request):
     _require_auth(request)
 
     normalized_email = _normalize_email(record.email)
@@ -413,7 +413,7 @@ async def save_signup_funnel(record: SignupFunnel, request: Request):
 
 
 @router.patch("/users/signup_funnel/paid-product-acknowledgement")
-async def acknowledge_paid_product(
+def acknowledge_paid_product(
     record: PaidProductAcknowledgement, request: Request
 ):
     _require_auth(request)
@@ -458,7 +458,7 @@ async def acknowledge_paid_product(
 
 
 @router.post("/users/signup_funnel/claim")
-async def claim_signup_funnel(record: SignupFunnelClaim, request: Request):
+def claim_signup_funnel(record: SignupFunnelClaim, request: Request):
     _require_auth(request)
 
     raw_final_email = record.final_email or record.email or record.checkout_email
@@ -535,7 +535,7 @@ async def claim_signup_funnel(record: SignupFunnelClaim, request: Request):
 
 
 @router.get("/users/me")
-async def get_current_user(auth0_sub: str, request: Request):
+def get_current_user(auth0_sub: str, request: Request):
     _require_auth(request)
 
     conn = None
@@ -559,7 +559,7 @@ async def get_current_user(auth0_sub: str, request: Request):
 
 
 @router.get("/users/billing")
-async def get_user_billing(auth0_sub: str, request: Request):
+def get_user_billing(auth0_sub: str, request: Request):
     _require_auth(request)
 
     conn = None
@@ -583,7 +583,7 @@ async def get_user_billing(auth0_sub: str, request: Request):
 
 
 @router.post("/users/ensure")
-async def ensure_user(record: EnsureUser, request: Request):
+def ensure_user(record: EnsureUser, request: Request):
     _require_auth(request)
 
     conn = None
@@ -694,7 +694,7 @@ async def ensure_user(record: EnsureUser, request: Request):
 
 
 @router.patch("/users/me/onboarding")
-async def update_onboarding(record: OnboardingUpdate, request: Request):
+def update_onboarding(record: OnboardingUpdate, request: Request):
     _require_auth(request)
 
     onboarding = record.onboarding
@@ -736,7 +736,7 @@ async def update_onboarding(record: OnboardingUpdate, request: Request):
 
 
 @router.patch("/users/me/linkedin")
-async def update_linkedin(record: LinkedinUpdate, request: Request):
+def update_linkedin(record: LinkedinUpdate, request: Request):
     _require_auth(request)
     conn = None
     try:
@@ -769,7 +769,7 @@ async def update_linkedin(record: LinkedinUpdate, request: Request):
 
 
 @router.get("/users/me/cv")
-async def get_cv(auth0_sub: str, request: Request):
+def get_cv(auth0_sub: str, request: Request):
     _require_auth(request)
     conn = None
     try:
@@ -804,7 +804,7 @@ async def get_cv(auth0_sub: str, request: Request):
 
 
 @router.post("/users/me/cv")
-async def save_cv(record: CvUploadRecord, request: Request):
+def save_cv(record: CvUploadRecord, request: Request):
     _require_auth(request)
     conn = None
     try:
@@ -842,7 +842,7 @@ async def save_cv(record: CvUploadRecord, request: Request):
 
 
 @router.delete("/users/me/cv")
-async def delete_cv(auth0_sub: str, request: Request):
+def delete_cv(auth0_sub: str, request: Request):
     _require_auth(request)
     conn = None
     try:
@@ -869,7 +869,7 @@ async def delete_cv(auth0_sub: str, request: Request):
 
 
 @router.post("/add_user")
-async def add_user(record: AddUser, request: Request):
+def add_user(record: AddUser, request: Request):
     _require_auth(request)
 
     conn = None

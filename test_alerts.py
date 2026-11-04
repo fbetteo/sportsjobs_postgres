@@ -1,5 +1,4 @@
 import unittest
-import asyncio
 from unittest.mock import patch
 
 from fastapi import HTTPException
@@ -80,7 +79,7 @@ class AddAlertNormalizationTests(unittest.TestCase):
             "endpoints.alerts.get_db_connection", return_value=conn
         ):
             with self.assertRaises(HTTPException) as error:
-                asyncio.run(delete_alert(9, "auth0|alex", request))
+                delete_alert(9, "auth0|alex", request)
 
         self.assertEqual(error.exception.status_code, 404)
         self.assertEqual(conn.cursor_instance.calls[0][1], ("auth0|alex",))
@@ -133,7 +132,7 @@ class AddAlertNormalizationTests(unittest.TestCase):
         with patch.dict("os.environ", {"HEADER_AUTHORIZATION": "test-token"}), patch(
             "endpoints.alerts.get_db_connection", return_value=conn
         ):
-            result = asyncio.run(add_alert(record, request))
+            result = add_alert(record, request)
 
         self.assertEqual(result["record"]["email"], "login@example.com")
         self.assertEqual(conn.cursor_instance.calls[1][1], ("login@example.com",))

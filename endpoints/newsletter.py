@@ -8,7 +8,7 @@ router = APIRouter()
 
 
 @router.post("/add_newsletter_signup")
-async def add_newsletter_signup(record: AddNewsletterSignup, request: Request):
+def add_newsletter_signup(record: AddNewsletterSignup, request: Request):
     auth_header = request.headers.get("Authorization")
     if not auth_header or auth_header != f"Bearer {os.getenv('HEADER_AUTHORIZATION')}":
         raise HTTPException(status_code=403, detail="Unauthorized")

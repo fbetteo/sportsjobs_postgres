@@ -23,6 +23,11 @@
 - Run `python database/users_refactor_2026.py` before deploying Auth0 profile/onboarding or Stripe entitlement endpoints.
 - Configure `STRIPE_MONTHLY_PRICE_ID`, `STRIPE_YEARLY_PRICE_ID`, `STRIPE_LIFETIME_PRICE_ID`, and `STRIPE_WEBHOOK_SECRET` for Stripe entitlement sync.
 
+## Tracing
+- `telemetry.py` sets up OpenTelemetry for `main.py`: one trace per request, a span per SQL statement (via `get_db_connection()`), and an incoming `traceparent` header continues the caller's trace.
+- Every span gets `user.id` (the Auth0 subject from the `auth0_sub` query param or the `auth0Sub`/`auth0_sub` JSON field). The request span also gets `outcome`: `success` (<400), `rejected` (4xx), or `error` (5xx/exception). SQL is recorded without parameter values.
+- Spans are exported only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. For Grafana Cloud, set `OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-<region>.grafana.net/otlp` and `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic%20<base64 of instanceId:token>` from the stack's OpenTelemetry page.
+
 ## Change Guidance
 - Keep migration scripts explicit and reversible where practical.
 - Do not modify backup files in `database_backups/` as part of normal feature work.

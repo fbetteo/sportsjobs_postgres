@@ -7,7 +7,7 @@ router = APIRouter()
 
 
 @router.post("/testimonials")
-async def create_testimonial(record: AddTestimonial):
+def create_testimonial(record: AddTestimonial):
     """Public endpoint to collect testimonials pending approval."""
     conn = None
     cursor = None
@@ -51,7 +51,7 @@ async def create_testimonial(record: AddTestimonial):
 
 
 @router.get("/testimonials")
-async def get_approved_testimonials(limit: int = 100):
+def get_approved_testimonials(limit: int = 100):
     """Public endpoint to fetch approved testimonials for display."""
     conn = None
     cursor = None
@@ -85,7 +85,7 @@ async def get_approved_testimonials(limit: int = 100):
 
 
 @router.get("/admin/testimonials")
-async def get_all_testimonials(
+def get_all_testimonials(
     request: Request, approved: bool | None = None, limit: int = 100
 ):
     """Admin endpoint to list testimonials, optionally filtered by approval status."""
@@ -130,7 +130,7 @@ async def get_all_testimonials(
 
 
 @router.post("/admin/testimonials/{testimonial_id}/approve")
-async def approve_testimonial(
+def approve_testimonial(
     testimonial_id: int,
     approval: ApproveTestimonial,
     request: Request,
