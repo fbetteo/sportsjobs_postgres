@@ -7,6 +7,12 @@ from models.schemas import GetBlog, AddBlog, WebhookPayload
 
 router = APIRouter()
 
+# Columns a blog list needs. Excludes the heavy article content.
+BLOG_LIST_COLUMNS = (
+    "blog_id, airtable_id, title, short_description, cover, content_image, "
+    "creation_date, last_modified, post_date"
+)
+
 
 @router.post("/blog")
 def get_blogposts(query_options: GetBlog, request: Request):
@@ -19,7 +25,8 @@ def get_blogposts(query_options: GetBlog, request: Request):
 
         data = query_options.model_dump()
         # Base query
-        query = "SELECT * FROM blog WHERE 1=1"
+        select_columns = BLOG_LIST_COLUMNS if query_options.list_fields_only else "*"
+        query = f"SELECT {select_columns} FROM blog WHERE 1=1"
         params = []
 
         # Add filters if they exist

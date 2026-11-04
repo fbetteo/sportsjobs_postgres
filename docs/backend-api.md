@@ -20,6 +20,7 @@
 ## API Conventions Used Here
 - Many read operations are `POST` endpoints with a request body for filters/sort/limit.
 - Pydantic schemas live in `models/schemas.py`.
+- `POST /blog` with `list_fields_only: true` returns every blog column except `content`; the default returns the full row for the blog post page.
 - Most endpoints return plain dict/list structures from SQL row mapping.
 - Route handlers own query construction and execution.
 - `POST /jobs` accepts `limit` and `offset` for paging; results sort by `sort_by` then `job_id DESC` so pages are stable. With `list_fields_only: true` it returns only job card columns (no `description`, `skills`, or apply `url`); the default returns the full row for the job detail page.

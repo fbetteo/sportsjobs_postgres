@@ -335,6 +335,8 @@ class GetJob(BaseModel):
 class GetBlog(BaseModel):
     limit: Optional[int] = (100,)
     filters: Optional[dict] = None
+    # Blog lists only need card fields; the blog post page needs the full row.
+    list_fields_only: bool = False
     sort_by: str = "creation_date"
     sort_direction: str = "desc"
 
